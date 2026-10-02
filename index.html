@@ -1811,7 +1811,8 @@ function initCanvasInteractions() {
         applyTransform();
       }
     });
-    const offUp = () => {
+    // 必须经 onWindowUp 注册到 window 上，否则松开鼠标时没有任何东西去结束拖动
+    const offUp = onWindowUp(() => {
       offMove(); offUp();
       wrap.style.cursor = '';
       if (marquee) {
@@ -1821,7 +1822,7 @@ function initCanvasInteractions() {
       }
       if (moved) markDirty();
       else { S.multi.clear(); select(null); }
-    };
+    });
   });
 
   wrap.addEventListener('wheel', e => {
