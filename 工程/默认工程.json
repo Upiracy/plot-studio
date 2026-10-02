@@ -1,0 +1,455 @@
+{
+  "schemaVersion": 1,
+  "meta": {
+    "name": "示例：雾港之夜",
+    "updatedAt": "2026-10-02 09:57:32"
+  },
+  "world": {
+    "brief": "时代：架空的海港城邦末期，蒸汽与帆船并存，没有魔法，只有被误认为魔法的自然现象。\n基调：潮湿、克制、慢热。恐怖来自\"本该发生却没有发生的事\"，不来自怪物。\n核心意象：雾、灯、钟、锈。\n一条硬规则：雾港的雾每年随潮汐来去，从不在同一时间回归两次——今年它早了一个月。",
+    "sections": [
+      {
+        "id": "sec_1",
+        "title": "地理",
+        "text": "雾港建在一条没入海中的旧山脊上，分为上城与下城。上城的灯塔群负责为夜航船指路，下城的九号到十二号泊位在十二年前的一场海难后被封。\n东岬灯塔是唯一还立着的灯塔，铜钟在停用那年被人拆走。"
+      },
+      {
+        "id": "sec_2",
+        "title": "势力与人物",
+        "text": "守夜人公会名义上维护灯塔，实际早已名存实亡，只剩奎因一个老人。\n三只锚酒馆的老板是港口的非官方情报中枢，他收集海难故事，也收集失踪者的名字。"
+      },
+      {
+        "id": "sec_3",
+        "title": "禁忌与伏笔约定",
+        "text": "任何角色都不会主动说出\"十二年前\"这四个字。\n凡涉及海难的对话，必须有一个人转移话题——这个习惯本身是伏笔。"
+      }
+    ]
+  },
+  "characters": [
+    {
+      "id": "ch_lin",
+      "name": "林·凡",
+      "aliases": [
+        "小凡"
+      ],
+      "color": "#4a9eff",
+      "brief": "雾港的年轻信使。三年前在一场海难里失去了姐姐，从此不再靠近码头。\n他知道自己在逃避什么，但拒绝承认。",
+      "tags": [
+        "主角"
+      ]
+    },
+    {
+      "id": "ch_kui",
+      "name": "奎因",
+      "aliases": [],
+      "color": "#f06060",
+      "brief": "雾港的旧灯塔看守人，七十岁。说话极慢，从不直视别人的眼睛。\n他记得每一次海难，也记得自己当年没有点亮灯。",
+      "tags": [
+        "关键人物"
+      ]
+    },
+    {
+      "id": "ch_ya",
+      "name": "崖",
+      "aliases": [
+        "戴斗笠的"
+      ],
+      "color": "#b07cff",
+      "brief": "身份不明的女人，总在雾最浓的时候出现。她似乎认识林·凡的姐姐。",
+      "tags": [
+        "悬念"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "id": "pl_pier",
+      "name": "旧码头",
+      "parentId": "",
+      "color": "#b07cff",
+      "brief": "被废弃的九号泊位。铁链锈成深红色，退潮时会露出半截船骸。",
+      "tags": [
+        "回忆"
+      ]
+    },
+    {
+      "id": "pl_tower",
+      "name": "东岬灯塔",
+      "parentId": "",
+      "color": "#e0a13a",
+      "brief": "停用十二年的灯塔。塔顶的铜钟被人拆走，只剩下四个空挂钩。",
+      "tags": []
+    },
+    {
+      "id": "pl_inn",
+      "name": "三只锚酒馆",
+      "parentId": "",
+      "color": "#3fb9a0",
+      "brief": "雾港唯一还亮着灯的店。老板收集每一个客人讲过的海难故事。",
+      "tags": []
+    }
+  ],
+  "axes": [
+    {
+      "id": "ax_main",
+      "name": "主线：雾的来处",
+      "color": "#4a9eff",
+      "visible": true,
+      "brief": "跟踪\"雾为什么会来\"这条谜团的推进。不记录角色的日常。",
+      "chapters": [
+        {
+          "id": "ch_a1",
+          "title": "第一章 · 信使的雨天",
+          "brief": "建立雾港与林·凡的日常，埋下\"姐姐\"与\"九号泊位\"两个钩子。",
+          "start": 0,
+          "end": 320,
+          "children": [
+            {
+              "id": "ch_a1s1",
+              "title": "日常与委托",
+              "brief": "",
+              "start": 0,
+              "end": 160,
+              "children": []
+            },
+            {
+              "id": "ch_a1s2",
+              "title": "第一次异常",
+              "brief": "",
+              "start": 160,
+              "end": 320,
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "ch_a2",
+          "title": "第二章 · 灯塔不亮",
+          "brief": "把谜团推到面前：灯塔本该亮，却没有。",
+          "start": 320,
+          "end": 700,
+          "children": []
+        },
+        {
+          "id": "ch_a3",
+          "title": "第三章 · 雾里的女人",
+          "brief": "",
+          "start": 700,
+          "end": 1000,
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "ax_char",
+      "name": "角色线：林·凡",
+      "color": "#e0a13a",
+      "visible": true,
+      "brief": "只跟踪林·凡对\"姐姐之死\"的态度变化，不记录外部事件，不用战斗细节。",
+      "chapters": [
+        {
+          "id": "ch_c1",
+          "title": "回避",
+          "brief": "",
+          "start": 0,
+          "end": 420,
+          "children": []
+        },
+        {
+          "id": "ch_c2",
+          "title": "被迫面对",
+          "brief": "",
+          "start": 420,
+          "end": 760,
+          "children": []
+        },
+        {
+          "id": "ch_c3",
+          "title": "承认",
+          "brief": "",
+          "start": 760,
+          "end": 1000,
+          "children": []
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "ev_1",
+      "title": "雨中送信",
+      "kind": "main",
+      "trigger": "passive",
+      "t": 40,
+      "y": -120,
+      "summary": "林·凡接到一封没有署名的信，收件人写着他自己的名字。",
+      "brief": "信纸是用旧海图裁的，墨迹被雨泡开了一半。",
+      "placeIds": [
+        "pl_inn"
+      ],
+      "characterIds": [
+        "ch_lin"
+      ],
+      "choices": [
+        {
+          "id": "op_1a",
+          "label": "当场拆信",
+          "note": ""
+        },
+        {
+          "id": "op_1b",
+          "label": "先把信收好",
+          "note": "更谨慎的路线"
+        }
+      ],
+      "scene": {
+        "steps": [
+          {
+            "id": "st1",
+            "type": "narr",
+            "fields": {
+              "text": "雾从傍晚开始起，比往年早了整整一个月。"
+            },
+            "children": []
+          },
+          {
+            "id": "st2",
+            "type": "main",
+            "fields": {
+              "speaker": "酒馆老板",
+              "text": "九号泊位？那地方退了潮才有东西看。",
+              "tone": "压低声音"
+            },
+            "children": []
+          }
+        ]
+      },
+      "tags": [],
+      "color": ""
+    },
+    {
+      "id": "ev_2",
+      "title": "雾气里的钟声",
+      "kind": "main",
+      "trigger": "passive",
+      "t": 200,
+      "y": -40,
+      "summary": "半夜，港口方向传来一声钟响——但铜钟早被拆走了。",
+      "brief": "",
+      "placeIds": [
+        "pl_pier"
+      ],
+      "characterIds": [
+        "ch_lin"
+      ],
+      "choices": [],
+      "scene": {
+        "steps": [
+          {
+            "id": "st3",
+            "type": "check",
+            "fields": {
+              "skill": "意志",
+              "dc": "12",
+              "succ": "林·凡听清了钟声的方向",
+              "fail": "他想起三年前的那一夜"
+            },
+            "children": []
+          }
+        ]
+      },
+      "tags": [],
+      "color": ""
+    },
+    {
+      "id": "ev_3",
+      "title": "东岬的看守人",
+      "kind": "main",
+      "trigger": "active",
+      "t": 380,
+      "y": -200,
+      "summary": "林·凡爬上空灯塔，见到了奎因。老人说灯是他自己关掉的。",
+      "brief": "",
+      "placeIds": [
+        "pl_tower"
+      ],
+      "characterIds": [
+        "ch_lin",
+        "ch_kui"
+      ],
+      "choices": [],
+      "scene": {
+        "steps": [
+          {
+            "id": "st4",
+            "type": "battle",
+            "fields": {
+              "enemies": "（无战斗，仅对峙）",
+              "env": "塔顶，风很大",
+              "win": "奎因开口",
+              "lose": ""
+            },
+            "children": []
+          }
+        ]
+      },
+      "tags": [],
+      "color": ""
+    },
+    {
+      "id": "ev_4",
+      "title": "戴斗笠的女人",
+      "kind": "main",
+      "trigger": "active",
+      "t": 760,
+      "y": -300,
+      "summary": "崖在灯塔下等他，说了一句只有姐姐才会说的话。",
+      "brief": "",
+      "placeIds": [
+        "pl_tower"
+      ],
+      "characterIds": [
+        "ch_lin",
+        "ch_ya"
+      ],
+      "choices": [],
+      "scene": {
+        "steps": []
+      },
+      "tags": [],
+      "color": ""
+    },
+    {
+      "id": "ev_5",
+      "title": "九号泊位的船骸",
+      "kind": "side",
+      "trigger": "active",
+      "t": 520,
+      "y": 180,
+      "summary": "退潮后，林·凡在船骸里找到一只写着姐姐名字的箱子。",
+      "brief": "",
+      "placeIds": [
+        "pl_pier"
+      ],
+      "characterIds": [
+        "ch_lin"
+      ],
+      "choices": [],
+      "scene": {
+        "steps": [
+          {
+            "id": "st5",
+            "type": "explore",
+            "fields": {
+              "target": "半截船骸",
+              "clues": "一只被撬开的木箱，锁是新的",
+              "dc": "13"
+            },
+            "children": []
+          }
+        ]
+      },
+      "tags": [],
+      "color": ""
+    },
+    {
+      "id": "ev_6",
+      "title": "老板的收藏",
+      "kind": "side",
+      "trigger": "passive",
+      "t": 120,
+      "y": 220,
+      "summary": "酒馆老板翻出十二年前的剪报，上面有奎因的名字。",
+      "brief": "如果林·凡当初没有拆信，他不会想到来问老板。",
+      "placeIds": [
+        "pl_inn"
+      ],
+      "characterIds": [
+        "ch_lin"
+      ],
+      "choices": [],
+      "scene": {
+        "steps": []
+      },
+      "tags": [],
+      "color": ""
+    }
+  ],
+  "edges": [
+    {
+      "id": "ed_1",
+      "from": "ev_1",
+      "to": "ev_2",
+      "viaChoiceId": "",
+      "requirements": [],
+      "note": ""
+    },
+    {
+      "id": "ed_2",
+      "from": "ev_1",
+      "to": "ev_6",
+      "viaChoiceId": "op_1b",
+      "requirements": [],
+      "note": "只有先收好信，才会想起来打听"
+    },
+    {
+      "id": "ed_3",
+      "from": "ev_2",
+      "to": "ev_3",
+      "viaChoiceId": "",
+      "requirements": [],
+      "note": ""
+    },
+    {
+      "id": "ed_4",
+      "from": "ev_3",
+      "to": "ev_5",
+      "viaChoiceId": "",
+      "requirements": [],
+      "note": ""
+    },
+    {
+      "id": "ed_5",
+      "from": "ev_3",
+      "to": "ev_4",
+      "viaChoiceId": "",
+      "requirements": [
+        {
+          "id": "rq_1",
+          "type": "flag",
+          "key": "在第二章听清了钟声的方向",
+          "value": "",
+          "note": "没听清就认不出崖说的话"
+        }
+      ],
+      "note": "示例：带额外门槛的依赖"
+    }
+  ],
+  "links": [
+    {
+      "id": "lk_1",
+      "from": "ev_6",
+      "to": "ev_3",
+      "type": "influence",
+      "label": "先知道名字",
+      "note": "如果先看过剪报，对峙时林·凡会直接叫出奎因的名字，走向另一段对白。",
+      "state": ""
+    },
+    {
+      "id": "lk_2",
+      "from": "ev_1",
+      "to": "ev_5",
+      "type": "foreshadow",
+      "label": "九号泊位的钩子",
+      "note": "第一章埋下，第五章回收。",
+      "state": "open"
+    }
+  ],
+  "view": {
+    "camera": {
+      "x": 80,
+      "y": 380,
+      "zoom": 0.8
+    },
+    "hiddenAxes": []
+  }
+}

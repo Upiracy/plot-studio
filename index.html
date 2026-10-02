@@ -1,0 +1,4246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>剧情框架 · Plot Studio</title>
+<style>
+/* ==========================================================================
+   0. 令牌
+   ========================================================================== */
+:root{
+  --bg:#0d1017;
+  --bg-canvas:#0a0d13;
+  --panel:#141924;
+  --panel-2:#1a2130;
+  --panel-3:#212a3b;
+  --line:#242d3d;
+  --line-soft:#1c2432;
+  --text:#e8eef7;
+  --text-dim:#9aa7bb;
+  --text-faint:#66738a;
+  --accent:#5b9dff;
+  --accent-soft:rgba(91,157,255,.14);
+  --accent-2:#b07cff;
+  --ok:#3fb950;
+  --warn:#e3a23c;
+  --danger:#f06060;
+  --main:#4a9eff;
+  --side:#3fb9a0;
+  --axis-main:#4a9eff;
+  --axis-char:#e0a13a;
+  --axis-event:#b07cff;
+  --radius:10px;
+  --radius-sm:7px;
+  --shadow:0 8px 28px rgba(0,0,0,.45);
+  --mono:"JetBrains Mono","Cascadia Mono",Consolas,monospace;
+  --sans:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--sans);
+  font-size:13px;line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;font-size:inherit;color:inherit;background:none;border:none;cursor:pointer}
+input,textarea,select{font-family:inherit;font-size:inherit;color:inherit}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2b3546;border-radius:5px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:#3c4a60;background-clip:content-box}
+
+/* ==========================================================================
+   1. 骨架
+   ========================================================================== */
+#app{
+  display:grid;height:100vh;
+  grid-template-columns:260px 1fr 320px;
+  grid-template-rows:46px 1fr auto;
+  grid-template-areas:"top top top" "left canvas right" "left ai right";
+}
+.topbar{grid-area:top}
+.leftbar{grid-area:left}
+.canvas-wrap{grid-area:canvas}
+.rightbar{grid-area:right}
+.ai-drawer{grid-area:ai}
+
+/* ==========================================================================
+   2. 顶栏
+   ========================================================================== */
+.topbar{
+  display:flex;align-items:center;gap:8px;padding:0 12px;
+  background:var(--panel);border-bottom:1px solid var(--line);z-index:40;
+}
+.brand{display:flex;align-items:center;gap:8px;padding-right:10px;margin-right:4px;border-right:1px solid var(--line)}
+.brand-mark{
+  width:20px;height:20px;border-radius:6px;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));
+}
+.brand-name{font-weight:600;letter-spacing:.3px;white-space:nowrap}
+.proj-name{
+  background:transparent;border:1px solid transparent;border-radius:6px;
+  padding:3px 8px;min-width:120px;max-width:230px;font-weight:500;
+}
+.proj-name:hover{border-color:var(--line)}
+.proj-name:focus{outline:none;border-color:var(--accent);background:var(--bg)}
+.tb-sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+.tb-btn{
+  display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:7px;
+  color:var(--text-dim);white-space:nowrap;transition:background .12s,color .12s;
+}
+.tb-btn:hover{background:var(--panel-3);color:var(--text)}
+.tb-btn.on{background:var(--accent-soft);color:var(--accent)}
+.tb-btn.danger:hover{color:var(--danger)}
+.tb-btn[disabled]{opacity:.35;cursor:not-allowed}
+.tb-spacer{flex:1}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:20px;
+  font-size:11px;background:var(--panel-3);color:var(--text-dim);white-space:nowrap;
+}
+.pill .dot{width:6px;height:6px;border-radius:50%;background:var(--text-faint)}
+.pill.ok .dot{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+.pill.warn .dot{background:var(--warn)}
+.pill.err .dot{background:var(--danger)}
+.pill.busy .dot{background:var(--accent);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.25}}
+
+/* 视图切换 */
+.seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px}
+.seg button{padding:4px 11px;border-radius:6px;color:var(--text-dim);font-size:12px}
+.seg button.on{background:var(--panel-3);color:var(--text)}
+
+/* ==========================================================================
+   3. 侧栏通用
+   ========================================================================== */
+.side{
+  background:var(--panel);display:flex;flex-direction:column;overflow:hidden;
+}
+.leftbar{border-right:1px solid var(--line)}
+.rightbar{border-left:1px solid var(--line)}
+.side-scroll{overflow-y:auto;overflow-x:hidden;flex:1;padding-bottom:24px}
+.section{border-bottom:1px solid var(--line-soft)}
+.sec-head{
+  display:flex;align-items:center;gap:7px;padding:9px 12px;cursor:pointer;user-select:none;
+  color:var(--text-dim);font-size:11.5px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;
+}
+.sec-head:hover{color:var(--text)}
+.sec-head .caret{font-size:9px;transition:transform .15s;color:var(--text-faint)}
+.section.collapsed .caret{transform:rotate(-90deg)}
+.section.collapsed .sec-body{display:none}
+.sec-head .count{margin-left:auto;font-size:10px;color:var(--text-faint);font-weight:400;text-transform:none;letter-spacing:0}
+.sec-head .add{margin-left:auto;color:var(--text-faint);padding:0 3px;border-radius:4px;font-size:14px;line-height:1}
+.sec-head .add:hover{color:var(--accent);background:var(--panel-3)}
+.sec-body{padding:0 8px 8px}
+
+.row{
+  display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:7px;
+  cursor:pointer;color:var(--text-dim);transition:background .1s,color .1s;position:relative;
+}
+.row:hover{background:var(--panel-2);color:var(--text)}
+.row.sel{background:var(--accent-soft);color:var(--text)}
+.row.sel::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:2px;border-radius:2px;background:var(--accent)}
+.row .swatch{width:8px;height:8px;border-radius:3px;flex:0 0 auto}
+.row .label{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .sub{font-size:10.5px;color:var(--text-faint);flex:0 0 auto}
+.row .eye{opacity:.45;font-size:11px;padding:1px 3px;border-radius:4px}
+.row .eye:hover{opacity:1;background:var(--panel-3)}
+.row.dim{opacity:.4}
+.row .kill{opacity:0;font-size:13px;padding:1px 4px;border-radius:4px;color:var(--text-faint)}
+.row:hover .kill{opacity:1}
+.row .kill:hover{color:var(--danger);background:var(--panel-3)}
+
+.indent-1{padding-left:22px}
+.indent-2{padding-left:36px}
+.empty-note{padding:7px 10px;color:var(--text-faint);font-size:11.5px;font-style:normal;opacity:.75}
+
+/* ==========================================================================
+   4. 画布
+   ========================================================================== */
+.canvas-wrap{position:relative;overflow:hidden;background:var(--bg-canvas);contain:strict}
+#grid{
+  position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,255,255,.022) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.022) 1px,transparent 1px);
+  background-size:32px 32px;
+}
+#axisLayer{position:absolute;left:0;top:0;pointer-events:none}
+.band{position:absolute;pointer-events:none}
+.divider{position:absolute;width:1px;pointer-events:auto;cursor:ew-resize}
+.divider::after{content:"";position:absolute;left:-4px;right:-4px;top:0;bottom:0}
+.divider:hover{box-shadow:0 0 0 1px currentColor}
+.divider.sub{opacity:.42}
+.divider-hit-flash{animation:flash .6s}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.15}}
+.chip{
+  position:absolute;pointer-events:auto;cursor:pointer;white-space:nowrap;
+  padding:2px 9px;border-radius:0 0 7px 7px;font-size:11px;font-weight:600;
+  transform:translateX(-1px);backdrop-filter:blur(3px);user-select:none;
+  border:1px solid rgba(255,255,255,.09);border-top:none;max-width:260px;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.chip:hover{filter:brightness(1.25)}
+.chip .ci{opacity:.6;font-weight:400;margin-left:5px}
+.axis-tag{
+  position:absolute;left:0;pointer-events:auto;cursor:pointer;white-space:nowrap;
+  padding:2px 10px 2px 8px;border-radius:0 7px 7px 0;font-size:10.5px;font-weight:700;
+  letter-spacing:.5px;user-select:none;border:1px solid rgba(255,255,255,.1);border-left:none;
+}
+.axis-tag:hover{filter:brightness(1.3)}
+.axis-tag .num{opacity:.6;font-weight:400;margin-left:6px}
+
+#world{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
+#svgLayer{position:absolute;top:0;left:0;width:1px;height:1px;overflow:visible;pointer-events:none}
+#nodeLayer{position:absolute;top:0;left:0}
+/* 章节标签与轴名固定在屏幕层，不随纵向平移跑掉 */
+#chipLayer{position:absolute;left:0;top:0;right:0;height:0;pointer-events:none;overflow:visible;z-index:12}
+
+.edge{fill:none;stroke-linecap:round;transition:stroke .12s}
+.edge-dep{stroke:#4d5b73;stroke-width:1.6}
+.edge-dep.hot{stroke:var(--accent);stroke-width:2.4}
+.edge-link{stroke:var(--accent-2);stroke-width:1.3;stroke-dasharray:5 5;opacity:.6}
+.edge-link.hot{opacity:1;stroke-width:2}
+/* 未回收的伏笔：暖色 + 更密的虚线，一眼能和普通引用线区分开 */
+.edge-link.open{stroke:var(--warn);stroke-dasharray:3 3;opacity:.85}
+.edge-ghost{stroke:var(--accent);stroke-width:2;stroke-dasharray:6 4}
+.edge-hit{fill:none;stroke:transparent;stroke-width:14;pointer-events:stroke;cursor:pointer}
+.edge-label{font-size:9.5px;fill:#8b97ab;pointer-events:none;font-family:var(--sans)}
+.edge-chip{pointer-events:all;cursor:pointer}
+.arrow-head{fill:#4d5b73}
+.arrow-head.hot{fill:var(--accent)}
+.arrow-head-link{fill:var(--accent-2)}
+
+/* 节点 */
+.node{
+  position:absolute;width:196px;background:var(--panel-2);border:1px solid var(--line);
+  border-radius:var(--radius);padding:8px 10px 9px;cursor:grab;user-select:none;
+  box-shadow:0 2px 10px rgba(0,0,0,.35);transition:border-color .12s,box-shadow .12s,opacity .15s;
+}
+.node:hover{border-color:#3a4760}
+.node.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft),0 6px 20px rgba(0,0,0,.5)}
+.node.dragging{cursor:grabbing;z-index:20;box-shadow:0 12px 32px rgba(0,0,0,.6)}
+.node.muted{opacity:.16;pointer-events:none}
+.node.dim{opacity:.34}
+.node.focus{box-shadow:0 0 0 2px rgba(255,255,255,.16),0 8px 26px rgba(0,0,0,.55)}
+.node.k-main{border-left:3px solid var(--main)}
+.node.k-side{border-left:3px solid var(--side)}
+.node .n-head{display:flex;align-items:flex-start;gap:6px}
+.node .n-title{
+  flex:1;font-weight:600;font-size:12.5px;line-height:1.35;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  word-break:break-word;
+}
+.node .n-sum{
+  margin-top:5px;font-size:11px;color:var(--text-faint);line-height:1.45;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+.node .n-foot{display:flex;align-items:center;gap:5px;margin-top:7px;flex-wrap:wrap}
+.tag{
+  font-size:9.5px;padding:1px 6px;border-radius:5px;background:var(--panel-3);
+  color:var(--text-dim);white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis;
+}
+.tag.t-main{background:rgba(74,158,255,.16);color:#8cc0ff}
+.tag.t-side{background:rgba(63,185,160,.16);color:#6fd8bf}
+.tag.t-passive{background:rgba(255,255,255,.06);color:var(--text-faint)}
+.tag.t-active{background:rgba(227,162,60,.16);color:#edc072}
+.tag.t-place{background:rgba(176,124,255,.13);color:#c9a4ff}
+.tag.t-char{background:rgba(240,96,96,.13);color:#ff9d9d}
+.tag.t-scene{background:rgba(255,255,255,.07)}
+.tag.t-focus{background:var(--accent-soft);color:var(--accent)}
+.n-dot{width:5px;height:5px;border-radius:50%;flex:0 0 auto}
+.n-dot.passive{background:var(--text-faint)}
+.n-dot.active{background:var(--warn);box-shadow:0 0 6px rgba(227,162,60,.7)}
+.node .handle{
+  position:absolute;width:11px;height:11px;border-radius:50%;background:var(--panel-3);
+  border:1.5px solid #4a5872;opacity:0;transition:opacity .12s,transform .12s;
+}
+.node:hover .handle,.node.sel .handle{opacity:1}
+.node .handle:hover{background:var(--accent);border-color:var(--accent);transform:scale(1.25)}
+.node .handle.r{right:-6px;top:50%;margin-top:-5.5px;cursor:crosshair}
+.node .handle.l{left:-6px;top:50%;margin-top:-5.5px;cursor:crosshair}
+.node .n-warn{
+  position:absolute;top:-7px;right:-7px;width:15px;height:15px;border-radius:50%;
+  background:var(--warn);color:#1a1206;font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
+/* 埋了伏笔还没回收：挂在卡片左上角 */
+.node .n-hook{
+  position:absolute;top:-7px;left:-7px;width:15px;height:15px;border-radius:50%;
+  background:var(--warn);color:#1a1206;font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px rgba(227,162,60,.25);
+}
+.node.multi{border-color:var(--accent-2);box-shadow:0 0 0 2px rgba(176,124,255,.2)}
+.marquee{position:absolute;border:1px solid var(--accent);background:var(--accent-soft);pointer-events:none;z-index:26;border-radius:3px}
+.req-row{display:grid;grid-template-columns:64px 1fr 1fr 28px;gap:6px;align-items:center;margin-bottom:6px}
+.req-row .inp,.req-row .sel{padding:4px 6px;font-size:11.5px}
+.search-row{display:flex;gap:6px;align-items:center;padding:2px 8px 8px}
+.search-row .inp{padding:4px 8px;font-size:12px}
+.batch-bar{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+
+/* 画布浮层控件 */
+.cv-overlay{position:absolute;z-index:30;pointer-events:none}
+.cv-overlay > *{pointer-events:auto}
+.cv-tl{top:10px;left:10px;display:flex;gap:6px;flex-direction:column;align-items:flex-start}
+.cv-tr{top:10px;right:10px;display:flex;gap:6px;align-items:center}
+.cv-bl{bottom:12px;left:10px}
+.cv-hint{
+  background:rgba(20,25,36,.88);border:1px solid var(--line);border-radius:8px;
+  padding:6px 11px;color:var(--text-faint);font-size:11px;backdrop-filter:blur(6px);
+}
+.floating{
+  background:rgba(20,25,36,.9);border:1px solid var(--line);border-radius:9px;
+  display:flex;overflow:hidden;backdrop-filter:blur(8px);box-shadow:var(--shadow);
+}
+.floating button{padding:5px 10px;color:var(--text-dim);font-size:12px}
+.floating button:hover{background:var(--panel-3);color:var(--text)}
+.floating button.on{background:var(--accent-soft);color:var(--accent)}
+.floating .vsep{width:1px;background:var(--line)}
+.zoom-read{min-width:52px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--text-dim);padding:5px 4px}
+.legend{
+  display:flex;flex-direction:column;gap:3px;background:rgba(20,25,36,.8);
+  border:1px solid var(--line);border-radius:8px;padding:7px 10px;backdrop-filter:blur(6px);
+}
+.legend .li{display:flex;align-items:center;gap:7px;font-size:10.5px;color:var(--text-faint)}
+.legend .li i{width:16px;height:0;border-top:2px solid;display:inline-block}
+
+/* 空态 */
+.canvas-empty{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:10px;color:var(--text-faint);pointer-events:none;text-align:center;
+}
+.canvas-empty h3{font-size:15px;color:var(--text-dim);font-weight:600}
+.canvas-empty p{font-size:12px;max-width:340px;line-height:1.7}
+
+/* ==========================================================================
+   5. 检查器
+   ========================================================================== */
+.insp{padding:12px}
+.insp-empty{padding:26px 14px;text-align:center;color:var(--text-faint);font-size:12px;line-height:1.8}
+.insp-title{
+  display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;margin-bottom:3px;
+}
+.insp-sub{font-size:11px;color:var(--text-faint);margin-bottom:12px;font-family:var(--mono)}
+.field{margin-bottom:11px}
+.field > label{
+  display:block;font-size:10.5px;color:var(--text-faint);margin-bottom:4px;
+  letter-spacing:.4px;text-transform:uppercase;font-weight:600;
+}
+.inp,.ta,.sel{
+  width:100%;background:var(--bg);border:1px solid var(--line);border-radius:7px;
+  padding:6px 9px;transition:border-color .12s;color:var(--text);
+}
+.inp:focus,.ta:focus,.sel:focus{outline:none;border-color:var(--accent)}
+.ta{resize:vertical;min-height:64px;line-height:1.6;font-size:12.5px}
+.sel{cursor:pointer;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--text-faint) 50%),linear-gradient(135deg,var(--text-faint) 50%,transparent 50%);background-position:calc(100% - 14px) 13px,calc(100% - 9px) 13px;background-size:5px 5px;background-repeat:no-repeat}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:6px 12px;border-radius:7px;background:var(--panel-3);color:var(--text-dim);
+  border:1px solid var(--line);transition:all .12s;
+}
+.btn:hover{background:#2a3446;color:var(--text)}
+.btn.primary{background:var(--accent);color:#06101f;border-color:var(--accent);font-weight:600}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn.danger{color:#ff9d9d;border-color:rgba(240,96,96,.3)}
+.btn.danger:hover{background:rgba(240,96,96,.16);color:#ffc0c0}
+.btn.block{width:100%}
+.btn.sm{padding:3px 9px;font-size:11.5px}
+.chip-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.chip-tag{
+  display:inline-flex;align-items:center;gap:5px;padding:2px 4px 2px 9px;border-radius:14px;
+  background:var(--panel-3);font-size:11px;color:var(--text-dim);
+}
+.chip-tag b{font-weight:500;color:var(--text)}
+.chip-tag button{color:var(--text-faint);padding:0 4px;line-height:1;border-radius:50%}
+.chip-tag button:hover{color:var(--danger)}
+.picker{position:relative}
+.picker-menu{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);z-index:60;
+  max-height:200px;overflow-y:auto;padding:4px;
+}
+.picker-menu .pm{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:12px}
+.picker-menu .pm:hover{background:var(--panel-3)}
+.picker-menu .pm .sub{margin-left:auto;font-size:10px;color:var(--text-faint)}
+.insp-actions{display:flex;gap:7px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line-soft)}
+.meta-list{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.meta-row{display:flex;gap:8px;font-size:11.5px;color:var(--text-faint)}
+.meta-row b{color:var(--text-dim);font-weight:500;flex:0 0 62px}
+.meta-row span{flex:1;word-break:break-all}
+.dep-list{display:flex;flex-direction:column;gap:4px}
+.dep-item{
+  display:flex;align-items:center;gap:7px;padding:4px 7px;border-radius:6px;
+  background:var(--bg);font-size:11.5px;cursor:pointer;border:1px solid var(--line-soft);
+}
+.dep-item:hover{border-color:var(--accent)}
+.dep-item .dir{color:var(--text-faint);font-family:var(--mono);font-size:10px}
+.dep-item .t{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dep-item .x{opacity:0;color:var(--text-faint);padding:0 3px}
+.dep-item:hover .x{opacity:1}
+.dep-item .x:hover{color:var(--danger)}
+
+/* ==========================================================================
+   6. AI 抽屉
+   ========================================================================== */
+.ai-drawer{
+  border-top:1px solid var(--line);background:var(--panel);
+  display:flex;flex-direction:column;height:280px;transition:height .18s;overflow:hidden;
+}
+.ai-drawer.closed{height:34px}
+.ai-drawer.tall{height:440px}
+.ai-head{
+  display:flex;align-items:center;gap:9px;padding:6px 12px;height:34px;flex:0 0 34px;
+  cursor:pointer;border-bottom:1px solid var(--line-soft);
+}
+.ai-head:hover{background:var(--panel-2)}
+.ai-head .ttl{font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:7px}
+.ai-head .caret{color:var(--text-faint);font-size:9px}
+.ai-body{flex:1;display:grid;grid-template-columns:220px 1fr;overflow:hidden}
+.ai-left{border-right:1px solid var(--line-soft);overflow-y:auto;padding:10px}
+.ai-main{display:flex;flex-direction:column;overflow:hidden}
+.chat-scroll{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:11px}
+.msg{display:flex;gap:9px;max-width:100%}
+.msg .av{
+  width:22px;height:22px;border-radius:6px;flex:0 0 auto;display:flex;
+  align-items:center;justify-content:center;font-size:10px;font-weight:700;
+}
+.msg.user .av{background:var(--panel-3);color:var(--text-dim)}
+.msg.ai .av{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#06101f}
+.msg .bd{flex:1;min-width:0}
+.msg .who{font-size:10.5px;color:var(--text-faint);margin-bottom:3px}
+.bubble{
+  background:var(--panel-2);border:1px solid var(--line-soft);border-radius:9px;
+  padding:8px 11px;font-size:12.5px;line-height:1.7;word-break:break-word;white-space:pre-wrap;
+}
+.msg.user .bubble{background:var(--panel-3)}
+.bubble code{font-family:var(--mono);font-size:11.5px;background:var(--bg);padding:1px 5px;border-radius:4px}
+.bubble pre{background:var(--bg);border:1px solid var(--line-soft);border-radius:7px;padding:9px;overflow-x:auto;margin:7px 0}
+.bubble pre code{background:none;padding:0}
+.bubble h4{font-size:12.5px;margin:8px 0 4px;color:var(--accent)}
+.bubble ul{padding-left:18px;margin:4px 0}
+.bubble strong{color:#fff}
+.chat-input{border-top:1px solid var(--line-soft);padding:9px 12px;display:flex;flex-direction:column;gap:7px}
+.chat-input textarea{
+  width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  padding:8px 10px;resize:none;min-height:44px;max-height:130px;line-height:1.6;font-size:12.5px;
+}
+.chat-input textarea:focus{outline:none;border-color:var(--accent)}
+.chat-row{display:flex;align-items:center;gap:7px}
+.chat-row .hint{font-size:10.5px;color:var(--text-faint)}
+.quick{display:flex;gap:5px;flex-wrap:wrap}
+.quick button{
+  font-size:11px;padding:3px 9px;border-radius:13px;background:var(--panel-2);
+  border:1px solid var(--line);color:var(--text-dim);
+}
+.quick button:hover{border-color:var(--accent);color:var(--accent)}
+.ctx-scope{display:flex;flex-direction:column;gap:5px}
+.scope-opt{
+  display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;cursor:pointer;
+  font-size:11.5px;color:var(--text-dim);border:1px solid transparent;
+}
+.scope-opt:hover{background:var(--panel-2)}
+.scope-opt.on{background:var(--accent-soft);color:var(--accent);border-color:rgba(91,157,255,.3)}
+.ctx-preview{
+  margin-top:8px;padding:8px;background:var(--bg);border:1px solid var(--line-soft);
+  border-radius:7px;font-size:10.5px;color:var(--text-faint);font-family:var(--mono);
+  max-height:150px;overflow-y:auto;line-height:1.65;white-space:pre-wrap;word-break:break-all;
+}
+.ai-sec-title{font-size:10.5px;font-weight:700;color:var(--text-faint);text-transform:uppercase;letter-spacing:.6px;margin:12px 0 6px}
+.ai-sec-title:first-child{margin-top:0}
+
+/* 提案 */
+.proposal{
+  border:1px solid rgba(227,162,60,.35);background:rgba(227,162,60,.06);
+  border-radius:9px;padding:10px 12px;margin-top:4px;
+}
+.proposal .p-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.proposal .p-kind{
+  font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;
+  background:rgba(227,162,60,.2);color:#edc072;letter-spacing:.4px;
+}
+.proposal .p-kind.auto{background:rgba(63,185,80,.18);color:#7ee08d}
+.proposal .p-title{flex:1;font-size:12px;font-weight:600}
+.proposal .p-diff{
+  background:var(--bg);border:1px solid var(--line-soft);border-radius:7px;
+  padding:8px 10px;font-family:var(--mono);font-size:11px;line-height:1.7;
+  max-height:220px;overflow:auto;white-space:pre-wrap;word-break:break-all;
+}
+.diff-add{color:#7ee08d}
+.diff-del{color:#ff9d9d}
+.diff-ctx{color:var(--text-faint)}
+.proposal .p-acts{display:flex;gap:7px;margin-top:9px}
+
+/* ==========================================================================
+   7. 模态
+   ========================================================================== */
+.mask{
+  position:fixed;inset:0;background:rgba(4,7,12,.72);backdrop-filter:blur(3px);
+  z-index:200;display:flex;align-items:center;justify-content:center;padding:34px;
+}
+.mask.hide{display:none}
+.modal{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;
+  max-height:100%;width:100%;max-width:880px;
+}
+.modal.wide{max-width:1080px}
+.modal.narrow{max-width:520px}
+.m-head{
+  display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--line);
+}
+.m-head .m-title{font-weight:600;font-size:14px;flex:1}
+.m-head .m-sub{font-size:11px;color:var(--text-faint);font-family:var(--mono)}
+.m-close{color:var(--text-faint);font-size:18px;padding:0 6px;border-radius:6px;line-height:1}
+.m-close:hover{color:var(--text);background:var(--panel-3)}
+.m-body{padding:16px;overflow-y:auto;flex:1}
+.m-foot{
+  display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);
+  background:var(--panel-2);align-items:center;
+}
+.m-foot .sp{flex:1}
+
+/* 步骤编辑器 */
+.steps{display:flex;flex-direction:column;gap:7px}
+.step{
+  display:flex;gap:9px;background:var(--panel-2);border:1px solid var(--line);
+  border-radius:9px;padding:9px 10px;align-items:flex-start;
+}
+.step.dragging{opacity:.4}
+.step .s-grip{
+  cursor:grab;color:var(--text-faint);font-size:13px;padding:2px 3px;line-height:1;
+  user-select:none;flex:0 0 auto;
+}
+.step .s-grip:active{cursor:grabbing}
+.step .s-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+.step .s-top{display:flex;gap:7px;align-items:center}
+.step .s-type{
+  background:var(--panel-3);border:1px solid var(--line);border-radius:6px;
+  padding:2px 8px;font-size:11px;cursor:pointer;
+}
+.step .s-num{color:var(--text-faint);font-family:var(--mono);font-size:10.5px}
+.step .s-del{color:var(--text-faint);padding:2px 6px;border-radius:5px}
+.step .s-del:hover{color:var(--danger);background:var(--panel-3)}
+.step .s-fields{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.step .s-fields.one{grid-template-columns:1fr}
+.step .mini-label{font-size:10px;color:var(--text-faint);margin-bottom:2px;display:block}
+.type-main{color:#8cc0ff}
+.type-narr{color:#c9a4ff}
+.type-battle{color:#ff9d9d}
+.type-explore{color:#6fd8bf}
+.type-check{color:#edc072}
+.type-move{color:#9aa7bb}
+.type-reward{color:#7ee08d}
+.type-custom{color:#9aa7bb}
+.add-step-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.add-step-row button{
+  font-size:11px;padding:4px 10px;border-radius:15px;background:var(--panel-2);
+  border:1px solid var(--line);color:var(--text-dim);
+}
+.add-step-row button:hover{border-color:var(--accent);color:var(--accent)}
+
+/* 通用列表编辑 */
+.sub-list{display:flex;flex-direction:column;gap:6px}
+.sub-row{display:flex;gap:8px;align-items:center}
+.hint-box{
+  background:var(--panel-2);border:1px solid var(--line-soft);border-radius:8px;
+  padding:9px 11px;font-size:11.5px;color:var(--text-faint);line-height:1.7;
+}
+.hint-box b{color:var(--text-dim)}
+.hint-box code{font-family:var(--mono);font-size:11px;background:var(--bg);border:1px solid var(--line-soft);border-radius:4px;padding:1px 5px;color:var(--accent)}
+.kbd{
+  font-family:var(--mono);font-size:10.5px;background:var(--panel-3);border:1px solid var(--line);
+  border-radius:4px;padding:1px 5px;color:var(--text-dim);
+}
+
+/* Toast */
+#toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:400;display:flex;flex-direction:column;gap:7px;align-items:center}
+.toast{
+  background:var(--panel-2);border:1px solid var(--line);border-radius:9px;
+  padding:8px 15px;font-size:12.5px;box-shadow:var(--shadow);animation:rise .2s;
+  display:flex;align-items:center;gap:8px;max-width:620px;
+}
+.toast.err{border-color:rgba(240,96,96,.45);background:rgba(240,96,96,.1)}
+.toast.ok{border-color:rgba(63,185,80,.4)}
+.toast.warn{border-color:rgba(227,162,60,.4)}
+@keyframes rise{from{opacity:0;transform:translateY(9px)}}
+
+/* 冲突提示 */
+.conflict{
+  position:fixed;top:56px;left:50%;transform:translateX(-50%);z-index:300;
+  background:rgba(227,162,60,.13);border:1px solid rgba(227,162,60,.45);
+  border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:12px;
+  box-shadow:var(--shadow);max-width:640px;
+}
+.conflict.hide{display:none}
+.conflict .ct{font-size:12.5px}
+.conflict .cd{font-size:11px;color:var(--text-faint);margin-top:2px}
+
+.drop-mask{
+  position:fixed;inset:0;background:rgba(91,157,255,.09);border:2px dashed var(--accent);
+  z-index:500;display:flex;align-items:center;justify-content:center;font-size:15px;
+  color:var(--accent);pointer-events:none;
+}
+.drop-mask.hide{display:none}
+.spin{
+  width:11px;height:11px;border:2px solid var(--line);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .7s linear infinite;display:inline-block;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- ============ 顶栏 ============ -->
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark"></div><div class="brand-name">剧情框架</div></div>
+    <input class="proj-name" id="projName" value="未命名工程" spellcheck="false" title="工程名称">
+    <span class="pill" id="savePill"><i class="dot"></i><span id="saveText">未连接</span></span>
+
+    <div class="tb-sep"></div>
+    <div class="seg" id="viewSeg">
+      <button data-view="timeline" class="on">时间线</button>
+      <button data-view="character">角色</button>
+      <button data-view="place">地点</button>
+    </div>
+
+    <div class="tb-sep"></div>
+    <button class="tb-btn" id="btnUndo" title="撤销 (Ctrl+Z)">撤销</button>
+    <button class="tb-btn" id="btnRedo" title="重做 (Ctrl+Shift+Z)">重做</button>
+
+    <div class="tb-spacer"></div>
+
+    <button class="tb-btn" id="btnAxes" title="显示/隐藏轴">轴</button>
+    <button class="tb-btn" id="btnFit" title="适应视图 (F)">适应</button>
+    <button class="tb-btn" id="btnExport" title="导出 JSON">导出</button>
+    <button class="tb-btn" id="btnImport" title="导入 JSON">导入</button>
+    <button class="tb-btn" id="btnSample" title="载入示例工程">示例</button>
+    <button class="tb-btn" id="btnHelp" title="快捷键与说明">帮助</button>
+  </header>
+
+  <!-- ============ 左栏 ============ -->
+  <aside class="leftbar side">
+    <div class="side-scroll" id="leftScroll"></div>
+  </aside>
+
+  <!-- ============ 画布 ============ -->
+  <main class="canvas-wrap" id="canvasWrap">
+    <div id="grid"></div>
+    <div id="world">
+      <div id="axisLayer"></div>
+      <svg id="svgLayer"><defs></defs><g id="gBands"></g><g id="gLinks"></g><g id="gEdges"></g><g id="gGhost"></g></svg>
+      <div id="nodeLayer"></div>
+    </div>
+    <div id="chipLayer"></div>
+
+    <div class="cv-overlay cv-tl">
+      <div class="floating" id="addBar">
+        <button id="btnAddEvent">+ 事件</button>
+        <div class="vsep"></div>
+        <button id="btnAddAxis">+ 轴</button>
+        <div class="vsep"></div>
+        <button id="btnLinkMode" title="点选两个事件以创建引用线 (Alt+拖拽亦可)">引用线</button>
+      </div>
+      <div class="legend" id="legend">
+        <div class="li"><i style="border-color:#4d5b73"></i>依赖（解锁顺序）</div>
+        <div class="li"><i style="border-color:var(--accent-2);border-top-style:dashed"></i>引用线（非强依赖）</div>
+      </div>
+    </div>
+
+    <div class="cv-overlay cv-tr">
+      <div class="floating">
+        <button id="btnZoomOut" title="缩小">-</button>
+        <div class="zoom-read" id="zoomRead">100%</div>
+        <button id="btnZoomIn" title="放大">+</button>
+        <div class="vsep"></div>
+        <button id="btnFit2" title="适应视图">适应</button>
+      </div>
+    </div>
+
+    <div class="cv-overlay cv-bl">
+      <div class="cv-hint" id="cvHint">双击空白新建事件 · 拖拽空白平移 · Shift+拖拽空白框选 · 方向键微调</div>
+    </div>
+
+    <div class="canvas-empty" id="canvasEmpty">
+      <h3>画布是空的</h3>
+      <p>双击空白处创建第一个事件，或点击左上角「+ 轴」先定义一条时间逻辑。</p>
+    </div>
+  </main>
+
+  <!-- ============ 右栏 ============ -->
+  <aside class="rightbar side">
+    <div class="side-scroll" id="inspector"></div>
+  </aside>
+
+  <!-- ============ AI 抽屉 ============ -->
+  <section class="ai-drawer closed" id="aiDrawer">
+    <div class="ai-head" id="aiHead">
+      <span class="caret" id="aiCaret">▶</span>
+      <span class="ttl">AI 协作</span>
+      <span class="pill" id="aiPill"><i class="dot"></i><span id="aiPillText">未配置</span></span>
+      <div class="tb-spacer"></div>
+      <button class="tb-btn sm" id="btnAiConfig">会话与模型</button>
+      <button class="tb-btn sm" id="btnAiClear">清空对话</button>
+    </div>
+    <div class="ai-body" id="aiBody"></div>
+  </section>
+</div>
+
+<div class="conflict hide" id="conflictBar">
+  <div>
+    <div class="ct" id="conflictText">工程文件被外部修改</div>
+    <div class="cd">可能是 AI 或编辑器改写了这个 JSON。请选择如何处理。</div>
+  </div>
+  <div class="tb-spacer"></div>
+  <button class="btn sm" id="btnConflictTake">采纳外部版本</button>
+  <button class="btn sm danger" id="btnConflictKeep">保留本地版本并覆盖</button>
+</div>
+
+<div class="mask hide" id="mask"></div>
+<div id="toasts"></div>
+<div class="drop-mask hide" id="dropMask">松开以载入工程 JSON</div>
+
+<script type="module">
+/* ============================================================================
+   0 · 常量
+   ========================================================================== */
+const SCHEMA_VERSION = 1;
+const BAND_H = 240000;                 // 轴色带世界高度，取足够大以在任何缩放下铺满视口
+const MIN_ZOOM = 0.15, MAX_ZOOM = 3.2;
+const UNDO_CAP = 80;
+
+const KINDS  = { main: '主线', side: '支线' };
+const TRIGGERS = { passive: '被动', active: '主动' };
+
+/* 剧情步骤类型。通用工具，全部可自由增删；type 只是分类，字段是通用的。 */
+const STEP_TYPES = {
+  main:    { name: '对白',   color: 'type-main' },
+  narr:    { name: '旁白',   color: 'type-narr' },
+  battle:  { name: '战斗',   color: 'type-battle' },
+  explore: { name: '探索',   color: 'type-explore' },
+  check:   { name: '检定',   color: 'type-check' },
+  move:    { name: '移动',   color: 'type-move' },
+  reward:  { name: '结算',   color: 'type-reward' },
+  custom:  { name: '自定义', color: 'type-custom' }
+};
+const STEP_ORDER = ['main', 'narr', 'battle', 'explore', 'check', 'move', 'reward', 'custom'];
+
+/* 每类步骤的专属字段定义（通用工具，字段名保持中性，不与任何具体战斗系统耦合） */
+const STEP_FIELDS = {
+  main:    [['speaker', '说话者', 'text'], ['text', '内容', 'area'], ['tone', '语气', 'text']],
+  narr:    [['text', '旁白内容', 'area']],
+  battle:  [['enemies', '对手', 'text'], ['env', '战场环境', 'text'], ['win', '胜利结果', 'area'], ['lose', '失败结果', 'area']],
+  explore: [['target', '探索对象', 'text'], ['clues', '可获得线索', 'area'], ['dc', '发现难度', 'text']],
+  check:   [['skill', '检定项', 'text'], ['dc', '难度', 'text'], ['succ', '成功', 'area'], ['fail', '失败', 'area']],
+  move:    [['from', '从', 'text'], ['to', '到', 'text'], ['cond', '条件', 'text']],
+  reward:  [['items', '获得物', 'text'], ['note', '说明', 'area']],
+  custom:  [['kind', '小标题', 'text'], ['text', '内容', 'area']]
+};
+
+const LINK_TYPES = {
+  influence:  { name: '影响',   desc: '做过某事件会让此事件走向不同' },
+  echo:       { name: '呼应',   desc: '意象或台词的呼应' },
+  foreshadow: { name: '伏笔',   desc: '埋设与回收：需要标注是否已回收' },
+  parallel:   { name: '平行',   desc: '同时发生或互为镜像' },
+  note:       { name: '备注',   desc: '仅作跳转提示' }
+};
+
+/* 依赖边的额外门槛（requirements）。这些是"除了完成源事件之外还需要的条件"。 */
+const REQ_TYPES = {
+  choice: { name: '选项',   ph: '选项 id', hint: '等价于触发选项，一般不手填' },
+  flag:   { name: '标记',   ph: '例如：见过灯塔' },
+  item:   { name: '物品',   ph: '例如：锈蚀的钥匙' },
+  stat:   { name: '属性',   ph: '例如：勇气 ≥ 5' },
+  custom: { name: '自定义', ph: '自由描述' }
+};
+
+const AXIS_PALETTE = ['#4a9eff', '#e0a13a', '#b07cff', '#3fb9a0', '#f06060', '#7ee08d', '#e07ab0', '#6fd8ff'];
+
+/* ============================================================================
+   1 · 工具
+   ========================================================================== */
+const $  = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+
+function uid(prefix) {
+  return (prefix || 'x') + '_' + Math.random().toString(36).slice(2, 8);
+}
+function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function debounce(fn, ms) {
+  let t = null;
+  return function () {
+    const a = arguments, self = this;
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(self, a), ms);
+  };
+}
+function el(tag, attrs, html) {
+  const n = document.createElement(tag);
+  if (attrs) for (const k in attrs) {
+    if (k === 'class') n.className = attrs[k];
+    else if (k === 'style') n.style.cssText = attrs[k];
+    else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), attrs[k]);
+    else if (attrs[k] != null) n.setAttribute(k, attrs[k]);
+  }
+  if (html != null) n.innerHTML = html;
+  return n;
+}
+function nowLabel() {
+  const d = new Date();
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+         ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
+/* 极简 Markdown：够设定文本用，避免引入依赖 */
+function mdLite(src) {
+  let s = esc(src || '');
+  s = s.replace(/```([\s\S]*?)```/g, (m, c) => '<pre><code>' + c.trim() + '</code></pre>');
+  s = s.replace(/^#### (.*)$/gm, '<h4>$1</h4>').replace(/^### (.*)$/gm, '<h4>$1</h4>')
+       .replace(/^## (.*)$/gm, '<h4>$1</h4>').replace(/^# (.*)$/gm, '<h4>$1</h4>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  s = s.replace(/^\s*[-*] (.*)$/gm, '<li>$1</li>');
+  s = s.replace(/(<li>[\s\S]*?<\/li>)(?!\s*<li>)/g, '<ul>$1</ul>');
+  s = s.replace(/\n{2,}/g, '</p><p>');
+  return '<p>' + s.replace(/\n/g, '<br>') + '</p>';
+}
+function toast(msg, kind, ms) {
+  const box = $('#toasts');
+  const n = el('div', { class: 'toast ' + (kind || '') }, esc(msg));
+  box.appendChild(n);
+  setTimeout(() => {
+    n.style.transition = 'opacity .25s, transform .25s';
+    n.style.opacity = '0';
+    n.style.transform = 'translateY(-8px)';
+    setTimeout(() => n.remove(), 260);
+  }, ms || (kind === 'err' ? 6500 : 3000));
+}
+function confirmBox(msg) { return window.confirm(msg); }
+
+/* ============================================================================
+   2 · 数据模型
+   ========================================================================== */
+function newProject(name) {
+  const axId = uid('ax');
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    meta: { name: name || '未命名工程', updatedAt: nowLabel() },
+    world: { brief: '', sections: [] },
+    characters: [], places: [],
+    axes: [{
+      id: axId, name: '主线', color: AXIS_PALETTE[0], visible: true,
+      brief: '这条轴跟踪故事的主干推进。',
+      chapters: [{ id: uid('ch'), title: '第一章', brief: '', start: 0, end: 1000, children: [] }]
+    }],
+    events: [], edges: [], links: [],
+    view: { camera: { x: 60, y: 120, zoom: 1 }, hiddenAxes: [] }
+  };
+}
+
+function newEvent(t, y) {
+  return {
+    id: uid('ev'), title: '新事件',
+    kind: 'side', trigger: 'passive',
+    t: Math.round(t || 0), y: Math.round(y || 0),
+    summary: '', brief: '',
+    placeIds: [], characterIds: [], choices: [],
+    scene: { steps: [] }, tags: [], color: ''
+  };
+}
+
+/** 保证同层章节首尾相接、不留空隙（ADR-0006） */
+function tileChapters(list, lo, hi) {
+  let arr = (list || []).filter(c => c && typeof c.start === 'number' && typeof c.end === 'number');
+  arr.sort((a, b) => a.start - b.start);
+  arr = arr.filter(c => c.end > c.start);
+  if (!arr.length) {
+    arr = [{ id: uid('ch'), title: '章节', brief: '', start: lo, end: hi, children: [] }];
+  }
+  // 首尾对齐到给定范围，中间强制连续
+  arr[0].start = Math.min(arr[0].start, lo);
+  arr[arr.length - 1].end = Math.max(arr[arr.length - 1].end, hi);
+  for (let i = 1; i < arr.length; i++) arr[i].start = arr[i - 1].end;
+  for (const c of arr) {
+    if (c.children && c.children.length) {
+      c.children = tileChapters(c.children, c.start, c.end);
+    }
+    if (!c.children) c.children = [];
+    if (!c.id) c.id = uid('ch');
+    if (c.title == null) c.title = '';
+    if (c.brief == null) c.brief = '';
+  }
+  return arr;
+}
+
+function normalize(p) {
+  const base = newProject();
+  if (!p || typeof p !== 'object') return base;
+  p.schemaVersion = p.schemaVersion || SCHEMA_VERSION;
+  p.meta = Object.assign({ name: '未命名工程', updatedAt: nowLabel() }, p.meta || {});
+  p.world = Object.assign({ brief: '', sections: [] }, p.world || {});
+  p.world.sections = (p.world.sections || []).map(s => ({
+    id: s.id || uid('sec'), title: s.title || '', text: s.text || ''
+  }));
+  p.characters = (p.characters || []).map(c => ({
+    id: c.id || uid('ch'), name: c.name || '未命名角色', aliases: c.aliases || [],
+    color: c.color || '', brief: c.brief || '', tags: c.tags || []
+  }));
+  p.places = (p.places || []).map(c => ({
+    id: c.id || uid('pl'), name: c.name || '未命名地点', parentId: c.parentId || '',
+    color: c.color || '', brief: c.brief || '', tags: c.tags || []
+  }));
+  p.axes = (p.axes || []).map((a, i) => ({
+    id: a.id || uid('ax'),
+    name: a.name || ('轴 ' + (i + 1)),
+    color: a.color || AXIS_PALETTE[i % AXIS_PALETTE.length],
+    visible: a.visible !== false,
+    brief: a.brief || '',
+    chapters: tileChapters(a.chapters, 0, 1000)
+  }));
+  if (!p.axes.length) p.axes = base.axes;
+  p.events = (p.events || []).map(e => ({
+    id: e.id || uid('ev'), title: e.title || '未命名事件',
+    kind: KINDS[e.kind] ? e.kind : 'side',
+    trigger: TRIGGERS[e.trigger] ? e.trigger : 'passive',
+    t: typeof e.t === 'number' ? e.t : 0,
+    y: typeof e.y === 'number' ? e.y : 0,
+    summary: e.summary || '', brief: e.brief || '',
+    placeIds: (e.placeIds || []).filter(Boolean),
+    characterIds: (e.characterIds || []).filter(Boolean),
+    choices: (e.choices || []).map(c => ({ id: c.id || uid('op'), label: c.label || '', note: c.note || '' })),
+    scene: { steps: ((e.scene && e.scene.steps) || []).map(s => ({
+      id: s.id || uid('st'),
+      type: STEP_TYPES[s.type] ? s.type : 'custom',
+      fields: s.fields || {},
+      children: s.children || []
+    })) },
+    tags: e.tags || [], color: e.color || ''
+  }));
+  const evIds = new Set(p.events.map(e => e.id));
+  p.edges = (p.edges || []).filter(g => evIds.has(g.from) && evIds.has(g.to)).map(g => ({
+    id: g.id || uid('ed'), from: g.from, to: g.to,
+    viaChoiceId: g.viaChoiceId || '',
+    requirements: (g.requirements || []).map(r => ({
+      id: r.id || uid('rq'),
+      type: REQ_TYPES[r.type] ? r.type : 'custom',
+      key: r.key || '', value: r.value || '', note: r.note || ''
+    })),
+    note: g.note || ''
+  }));
+  p.links = (p.links || []).filter(g => evIds.has(g.from) && evIds.has(g.to)).map(g => {
+    const type = LINK_TYPES[g.type] ? g.type : 'influence';
+    return {
+      id: g.id || uid('lk'), from: g.from, to: g.to, type: type,
+      label: g.label || '', note: g.note || '',
+      // 只有伏笔需要回收状态：open = 已埋设未回收，closed = 已回收
+      state: type === 'foreshadow' ? (g.state === 'closed' ? 'closed' : 'open') : ''
+    };
+  });
+  p.view = Object.assign({ camera: { x: 60, y: 120, zoom: 1 }, hiddenAxes: [] }, p.view || {});
+  if (!p.view.camera) p.view.camera = { x: 60, y: 120, zoom: 1 };
+  return p;
+}
+
+/* 便捷查询 */
+const byId = (list, id) => (list || []).find(x => x.id === id) || null;
+const eventById = id => byId(P.events, id);
+const axisById  = id => byId(P.axes, id);
+const charById  = id => byId(P.characters, id);
+const placeById = id => byId(P.places, id);
+
+function axisRange(axis) {
+  const cs = axis.chapters;
+  return cs.length ? [cs[0].start, cs[cs.length - 1].end] : [0, 1000];
+}
+/** 章节归属是派生的（ADR-0004）：由逻辑时间落在哪个区间决定 */
+function chapterAt(axis, t) {
+  const top = axis.chapters.find(c => t >= c.start && t < c.end) ||
+              (axis.chapters.length ? axis.chapters[axis.chapters.length - 1] : null);
+  if (!top) return { chapter: null, sub: null };
+  const sub = (top.children || []).find(c => t >= c.start && t < c.end) || null;
+  return { chapter: top, sub: sub };
+}
+function pathOfChapter(axis, chapterId) {
+  for (const c of axis.chapters) {
+    if (c.id === chapterId) return [c];
+    for (const s of (c.children || [])) if (s.id === chapterId) return [c, s];
+  }
+  return null;
+}
+function deps(p) {
+  const out = {}, inc = {};
+  for (const e of P.events) { out[e.id] = []; inc[e.id] = []; }
+  for (const g of P.edges) { if (out[g.from]) out[g.from].push(g); if (inc[g.to]) inc[g.to].push(g); }
+  return { out, inc };
+}
+
+/* ============================================================================
+   3 · 状态与撤销
+   ========================================================================== */
+let P = newProject();
+const S = {
+  selection: null,        // {type:'event'|'axis'|'chapter'|'character'|'place'|'world'|'edge'|'link', id}
+  viewMode: 'timeline',   // timeline | character | place
+  focusId: '',            // 角色/地点视图的焦点实体
+  linkMode: false,        // 点选两节点创建引用线
+  linkAnchor: '',
+  connecting: null,       // {from, toX, toY, link:boolean}
+  drag: null,
+  camera: { x: 60, y: 120, zoom: 1 },
+  session: { mode: 'direct', since: 0, es: null, connected: false },
+  search: '', kindFilter: 'all', trigFilter: 'all',
+  multi: new Set(),
+  ai: { open: false, busy: false, messages: [], scope: 'neighbor', draft: null, autoApplied: [] }
+};
+
+let undoStack = [], redoStack = [];
+let dragging = false;   // 拖拽中，用于抑制外部重载
+
+function pushUndo() {
+  undoStack.push(JSON.stringify(P));
+  if (undoStack.length > UNDO_CAP) undoStack.shift();
+  redoStack.length = 0;
+  updateHistoryButtons();
+}
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(JSON.stringify(P));
+  P = JSON.parse(undoStack.pop());
+  if (S.selection && !resolveSelection()) S.selection = null;
+  updateHistoryButtons(); markDirty('撤销'); renderAll();
+}
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(JSON.stringify(P));
+  P = JSON.parse(redoStack.pop());
+  if (S.selection && !resolveSelection()) S.selection = null;
+  updateHistoryButtons(); markDirty('重做'); renderAll();
+}
+function updateHistoryButtons() {
+  $('#btnUndo').disabled = !undoStack.length;
+  $('#btnRedo').disabled = !redoStack.length;
+}
+function resolveSelection() {
+  const s = S.selection;
+  if (!s) return false;
+  if (s.type === 'event')   return !!eventById(s.id);
+  if (s.type === 'axis')    return !!axisById(s.id);
+  if (s.type === 'character') return !!charById(s.id);
+  if (s.type === 'place')   return !!placeById(s.id);
+  if (s.type === 'edge')    return P.edges.some(g => g.id === s.id);
+  if (s.type === 'link')    return P.links.some(g => g.id === s.id);
+  if (s.type === 'chapter') return P.axes.some(a => pathOfChapter(a, s.id));
+  return true;
+}
+function select(type, id) {
+  if (type) S.selection = { type, id };
+  else S.selection = null;
+  renderInspector(); renderLeft(); renderCanvas(); renderAiStatus();
+  reportSession();
+}
+
+/* ============================================================================
+   4 · 持久化
+   ========================================================================== */
+const IO = {
+  mode: 'offline',      // offline | server
+  file: '',             // 工程文件名
+  saveTimer: null,
+  selfWriteUntil: 0,
+  es: null,
+  lastSavedAt: 0
+};
+
+async function probeServer() {
+  try {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 1200);
+    const r = await fetch('/api/health', { signal: ctl.signal });
+    clearTimeout(timer);
+    if (!r.ok) return false;
+    const j = await r.json();
+    return !!(j && j.ok);
+  } catch (e) { return false; }
+}
+
+function setSavePill(kind, text) {
+  const p = $('#savePill');
+  p.className = 'pill ' + (kind || '');
+  $('#saveText').textContent = text;
+}
+
+const markDirty = debounce(function (reason) {
+  reportSession();
+  if (IO.mode === 'server') saveToServer(reason);
+  else {
+    try { localStorage.setItem('plotstudio.backup', JSON.stringify(P)); } catch (e) {}
+    setSavePill('warn', '本地草稿（未连接服务）');
+  }
+}, 600);
+
+async function saveToServer() {
+  if (IO.mode !== 'server' || !IO.file) return;
+  const payload = clone(P);
+  payload.meta.updatedAt = nowLabel();
+  setSavePill('busy', '保存中');
+  try {
+    const r = await fetch('/api/project', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: IO.file, data: payload })
+    });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    P.meta.updatedAt = payload.meta.updatedAt;
+    IO.selfWriteUntil = Date.now() + 1400;
+    IO.lastSavedAt = Date.now();
+    setSavePill('ok', '已保存 ' + new Date().toTimeString().slice(0, 5));
+    renderProjMeta();
+  } catch (e) {
+    setSavePill('err', '保存失败');
+    toast('保存失败：' + e.message, 'err');
+  }
+}
+
+async function loadFromServer(file) {
+  const r = await fetch('/api/project?file=' + encodeURIComponent(file));
+  const text = await r.text();
+  if (!r.ok) throw new Error(text.slice(0, 200));
+  P = normalize(JSON.parse(text));
+  IO.file = file;
+  afterLoad();
+  watchFile();
+}
+
+function afterLoad() {
+  S.camera = P.view.camera || { x: 60, y: 120, zoom: 1 };
+  S.selection = null;
+  S.focusId = '';
+  undoStack.length = 0; redoStack.length = 0;
+  updateHistoryButtons();
+  applyTransform();
+  renderAll();
+}
+
+function watchFile() {
+  if (IO.es) { IO.es.close(); IO.es = null; }
+  if (IO.mode !== 'server' || !IO.file) return;
+  const es = new EventSource('/api/watch?file=' + encodeURIComponent(IO.file));
+  es.addEventListener('changed', async ev => {
+    if (Date.now() < IO.selfWriteUntil) return;      // 自己刚写的，忽略
+    if (dragging) { setTimeout(() => applyExternal(), 700); return; }
+    applyExternal();
+  });
+  es.onerror = () => { /* EventSource 自带重连 */ };
+  IO.es = es;
+}
+
+async function applyExternal() {
+  const r = await fetch('/api/project?file=' + encodeURIComponent(IO.file));
+  if (!r.ok) return;
+  const text = await r.text();
+  let next;
+  try { next = JSON.parse(text); } catch (e) { return; }
+  if (JSON.stringify(normalize(clone(next))) === JSON.stringify(P)) return;
+  const keepSel = S.selection;
+  P = normalize(next);
+  if (keepSel && !resolveSelection()) S.selection = null;
+  renderAll();
+  toast('已同步工程文件的外部修改', 'ok', 2200);
+}
+
+function downloadJSON(filename, obj) {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json;charset=utf-8' });
+  const a = el('a', { href: URL.createObjectURL(blob), download: filename });
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 400);
+}
+
+function pickLocalFile(accept, cb) {
+  const inp = el('input', { type: 'file', accept: accept || '.json,application/json' });
+  inp.addEventListener('change', () => { if (inp.files && inp.files[0]) cb(inp.files[0]); });
+  inp.click();
+}
+
+/* ============================================================================
+   5 · 视图变换
+   ========================================================================== */
+const NODE_W = 196;
+let chipRefs = [];      // [{el, t}] 屏幕层章节标签，平移时只改 left
+
+function applyTransform() {
+  const c = S.camera;
+  $('#world').style.transform = 'translate(' + c.x + 'px,' + c.y + 'px) scale(' + c.zoom + ')';
+  const size = 32 * c.zoom;
+  const g = $('#grid');
+  g.style.backgroundSize = size + 'px ' + size + 'px';
+  g.style.backgroundPosition = c.x + 'px ' + c.y + 'px';
+  $('#zoomRead').textContent = Math.round(c.zoom * 100) + '%';
+  P.view.camera = c;
+  updateChipPositions();
+}
+function worldToScreenX(wx) { return wx * S.camera.zoom + S.camera.x; }
+function worldToScreenY(wy) { return wy * S.camera.zoom + S.camera.y; }
+function screenToWorld(sx, sy) {
+  const r = $('#canvasWrap').getBoundingClientRect();
+  return {
+    x: (sx - r.left - S.camera.x) / S.camera.zoom,
+    y: (sy - r.top - S.camera.y) / S.camera.zoom
+  };
+}
+function zoomAt(sx, sy, factor) {
+  const r = $('#canvasWrap').getBoundingClientRect();
+  const px = sx - r.left, py = sy - r.top;
+  const z0 = S.camera.zoom, z1 = clamp(z0 * factor, MIN_ZOOM, MAX_ZOOM);
+  if (z1 === z0) return;
+  const wx = (px - S.camera.x) / z0, wy = (py - S.camera.y) / z0;
+  S.camera.zoom = z1;
+  S.camera.x = px - wx * z1;
+  S.camera.y = py - wy * z1;
+  applyTransform();
+  markDirty();
+}
+function fitView() {
+  const box = $('#canvasWrap').getBoundingClientRect();
+  if (!P.events.length) {
+    S.camera = { x: 60, y: Math.max(140, box.height * 0.42), zoom: 1 };
+    applyTransform(); markDirty(); return;
+  }
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const e of P.events) {
+    x0 = Math.min(x0, e.t); y0 = Math.min(y0, e.y);
+    x1 = Math.max(x1, e.t + NODE_W); y1 = Math.max(y1, e.y + 110);
+  }
+  for (const a of P.axes) {
+    if (!a.visible) continue;
+    const r = axisRange(a);
+    x0 = Math.min(x0, r[0]); x1 = Math.max(x1, r[1]);
+  }
+  const pad = 70;
+  const z = clamp(Math.min((box.width - pad * 2) / Math.max(1, x1 - x0),
+                           (box.height - pad * 2 - 90) / Math.max(1, y1 - y0)), 0.45, 1.4);
+  S.camera.zoom = z;
+  S.camera.x = pad - x0 * z + Math.max(0, (box.width - pad * 2 - (x1 - x0) * z) / 2);
+  S.camera.y = 96 + pad - y0 * z + Math.max(0, (box.height - pad * 2 - 90 - (y1 - y0) * z) / 2);
+  applyTransform(); markDirty();
+}
+
+/* ============================================================================
+   6 · 渲染入口
+   ========================================================================== */
+function renderAll() {
+  renderProjMeta();
+  renderLeft();
+  renderInspector();
+  renderAxisLayer();
+  renderCanvas();
+  renderAiStatus();
+}
+function renderProjMeta() {
+  const inp = $('#projName');
+  if (document.activeElement !== inp) inp.value = P.meta.name || '未命名工程';
+}
+function renderCanvas() {
+  renderAxisLayer();
+  renderNodes();
+}
+
+/* ---- 焦点过滤：角色 / 地点视图都是一次投影，不持有独立数据（ADR-0004 同源原则） ---- */
+function computeFocus() {
+  if (S.viewMode === 'timeline' || !S.focusId) return { active: false, ids: null, label: '' };
+  const hit = new Set();
+  if (S.viewMode === 'character') {
+    for (const e of P.events) if (e.characterIds.includes(S.focusId)) hit.add(e.id);
+  } else {
+    for (const e of P.events) if (e.placeIds.includes(S.focusId)) hit.add(e.id);
+  }
+  const ring = new Set(hit);
+  for (const g of P.edges.concat(P.links)) {
+    if (hit.has(g.from)) ring.add(g.to);
+    if (hit.has(g.to)) ring.add(g.from);
+  }
+  const ent = S.viewMode === 'character' ? charById(S.focusId) : placeById(S.focusId);
+  return { active: true, ids: ring, direct: hit, label: ent ? ent.name : '' };
+}
+
+/* ============================================================================
+   7 · 轴图层（色带 + 分割线 + 章节标签）
+   ========================================================================== */
+function renderAxisLayer() {
+  const layer = $('#axisLayer');
+  const chips = $('#chipLayer');
+  layer.innerHTML = '';
+  chips.innerHTML = '';
+  chipRefs = [];
+
+  const visible = P.axes.filter(a => a.visible);
+  let row = 0;
+  for (const ax of visible) {
+    const dz = el('div', {
+      class: 'axis-tag', style: 'top:' + (8 + row * 24) + 'px;background:' + hexA(ax.color, .22) + ';color:' + ax.color,
+      title: ax.name + '（点击选中这条轴）'
+    }, esc(ax.name) + '<span class="num">' + ax.chapters.length + ' 章</span>');
+    dz.addEventListener('click', e => { e.stopPropagation(); select('axis', ax.id); });
+    chips.appendChild(dz);
+
+    for (const ch of ax.chapters) {
+      // 色带：世界坐标，纵向取足够大的高度以铺满视口
+      const b = el('div', {
+        class: 'band',
+        style: 'left:' + ch.start + 'px;width:' + Math.max(1, ch.end - ch.start) + 'px;' +
+               'top:' + (-BAND_H / 2) + 'px;height:' + BAND_H + 'px;' +
+               'background:' + hexA(ax.color, 0.055)
+      });
+      layer.appendChild(b);
+      // 章节标签：屏幕层
+      const chip = el('div', {
+        class: 'chip',
+        style: 'top:' + (8 + row * 24) + 'px;background:' + hexA(ax.color, .16) + ';color:' + ax.color +
+               ';border-color:' + hexA(ax.color, .3),
+        title: (ch.title || '未命名章节') + '  [' + fmtNum(ch.start) + ' → ' + fmtNum(ch.end) + ']'
+      }, esc(ch.title || '未命名章节') + '<span class="ci">' + fmtNum(ch.start) + '–' + fmtNum(ch.end) + '</span>');
+      chip.addEventListener('click', ev => { ev.stopPropagation(); select('chapter', ch.id); });
+      chips.appendChild(chip);
+      chipRefs.push({ el: chip, t: ch.start });
+
+      // 该章节的子章节分割线
+      for (let i = 1; i < (ch.children || []).length; i++) {
+        layer.appendChild(makeDivider(ax, ch, ch.children[i].start, 1, i));
+      }
+    }
+    // 顶级分割线
+    for (let i = 0; i < ax.chapters.length; i++) {
+      layer.appendChild(makeDivider(ax, null, ax.chapters[i].start, 0, i));
+    }
+    layer.appendChild(makeDivider(ax, null, ax.chapters[ax.chapters.length - 1].end, 0, ax.chapters.length));
+    row++;
+  }
+  updateChipPositions();
+}
+function makeDivider(ax, parentChapter, t, level, index) {
+  const d = el('div', {
+    class: 'divider' + (level ? ' sub' : ''),
+    style: 'left:' + t + 'px;top:' + (-BAND_H / 2) + 'px;height:' + BAND_H + 'px;' +
+           'background:' + hexA(ax.color, level ? .3 : .62) + ';color:' + ax.color
+  });
+  d.dataset.axis = ax.id;
+  d.dataset.parent = parentChapter ? parentChapter.id : '';
+  d.dataset.index = String(index);
+  d.dataset.level = String(level);
+  d.title = '拖动以调整章节边界，双击在此切分';
+  onDown(d, startDividerDrag);
+  d.addEventListener('dblclick', ev => {
+    ev.stopPropagation();
+    splitAt(ax.id, parentChapter ? parentChapter.id : '', t);
+  });
+  return d;
+}
+function updateChipPositions() {
+  for (const r of chipRefs) r.el.style.left = worldToScreenX(r.t) + 'px';
+}
+function hexA(hex, a) {
+  const h = (hex || '#888888').replace('#', '');
+  const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+  return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')';
+}
+function fmtNum(v) {
+  if (Math.abs(v) >= 1000) return (v / 1000).toFixed(1).replace('.0', '') + 'k';
+  return String(Math.round(v * 10) / 10);
+}
+
+/* ============================================================================
+   8 · 节点与连线
+   ========================================================================== */
+function renderNodes() {
+  const focus = computeFocus();
+  const layer = $('#nodeLayer');
+  layer.innerHTML = '';
+  const nodeEls = {};
+
+  for (const ev of P.events) {
+    const isSel = S.selection && S.selection.type === 'event' && S.selection.id === ev.id;
+    const inMulti = S.multi.has(ev.id);
+    const focused = focus.active && focus.ids.has(ev.id);
+    const hidden = (focus.active && !focused) || !matchesFilter(ev);
+    const n = el('div', {
+      class: 'node k-' + ev.kind + (isSel ? ' sel' : '') + (inMulti ? ' multi' : '') +
+             (hidden ? ' muted' : (focus.active && focused ? ' focus' : '')),
+      style: 'left:' + ev.t + 'px;top:' + ev.y + 'px;' + (ev.color ? 'border-color:' + ev.color : '')
+    });
+    n.dataset.id = ev.id;
+
+    const warn = warnFor(ev);
+    const openHook = P.links.some(l => l.type === 'foreshadow' && l.state !== 'closed' && l.from === ev.id);
+    const tagBits = [];
+    tagBits.push('<span class="tag t-' + ev.kind + '">' + KINDS[ev.kind] + '</span>');
+    tagBits.push('<span class="tag t-' + ev.trigger + '">' + TRIGGERS[ev.trigger] + '</span>');
+    if (ev.scene.steps.length) tagBits.push('<span class="tag t-scene">剧情 ' + ev.scene.steps.length + '</span>');
+    if (ev.choices.length) tagBits.push('<span class="tag t-scene">选项 ' + ev.choices.length + '</span>');
+    for (const pid of ev.placeIds.slice(0, 1)) {
+      const pl = placeById(pid); if (pl) tagBits.push('<span class="tag t-place">' + esc(pl.name) + '</span>');
+    }
+    if (ev.characterIds.length) {
+      const c = charById(ev.characterIds[0]);
+      if (c) tagBits.push('<span class="tag t-char">' + esc(c.name) +
+        (ev.characterIds.length > 1 ? ' +' + (ev.characterIds.length - 1) : '') + '</span>');
+    }
+
+    n.innerHTML =
+      '<div class="n-head"><span class="n-dot ' + ev.trigger + '"></span>' +
+      '<div class="n-title">' + esc(ev.title) + '</div></div>' +
+      (ev.summary ? '<div class="n-sum">' + esc(ev.summary) + '</div>' : '') +
+      '<div class="n-foot">' + tagBits.join('') + '</div>' +
+      (warn ? '<div class="n-warn" title="' + esc(warn) + '">!</div>' : '') +
+      (openHook ? '<div class="n-hook" title="这里埋了伏笔，还没有回收">伏</div>' : '') +
+      '<div class="handle l" title="从此处拖出以连接前驱"></div>' +
+      '<div class="handle r" title="从此处拖出以连接后继（按住 Alt 创建引用线）"></div>';
+
+    onDown(n, onNodePointerDown);
+    n.addEventListener('dblclick', e => { e.stopPropagation(); openSceneEditor(ev.id); });
+    layer.appendChild(n);
+    nodeEls[ev.id] = n;
+  }
+
+  // 先布局后取尺寸，再画线，端点才能贴合节点卡片
+  const rects = {};
+  for (const id in nodeEls) {
+    const e2 = nodeEls[id];
+    rects[id] = { x: e2.offsetLeft, y: e2.offsetTop, w: e2.offsetWidth, h: e2.offsetHeight };
+  }
+  drawEdges(rects, focus);
+  $('#canvasEmpty').style.display = P.events.length ? 'none' : 'flex';
+}
+function warnFor(ev) {
+  const msgs = [];
+  const outs = P.edges.filter(g => g.from === ev.id);
+  if (ev.choices.length) {
+    for (const c of ev.choices) if (!outs.some(g => g.viaChoiceId === c.id)) msgs.push('选项「' + c.label + '」没有后继');
+  }
+  const hasAny = outs.length || P.edges.some(g => g.to === ev.id) || P.links.some(g => g.from === ev.id || g.to === ev.id);
+  if (!hasAny) msgs.push('孤立事件：没有任何依赖或引用');
+  if (ev.kind === 'main' && !P.edges.some(g => g.to === ev.id) && P.events.length > 1) msgs.push('主线事件没有前驱');
+  return msgs.join('；');
+}
+function drawEdges(rects, focus) {
+  const gEdges = $('#gEdges'), gLinks = $('#gLinks');
+  gEdges.innerHTML = ''; gLinks.innerHTML = '';
+  const R = id => rects[id] || { x: 0, y: 0, w: NODE_W, h: 60 };
+  const hot = id => S.selection && ((S.selection.type === 'event' && S.selection.id === id) ||
+                                    (S.selection.type === 'edge' && S.selection.id === id));
+
+  const mk = (cls, d, marker, attrs) => {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', d); p.setAttribute('class', cls);
+    if (marker) p.setAttribute('marker-end', 'url(#' + marker + ')');
+    if (attrs) for (const k in attrs) p.setAttribute(k, attrs[k]);
+    return p;
+  };
+
+  for (const lk of P.links) {
+    const a = R(lk.from), b = R(lk.to);
+    const d = curve(a.x + a.w / 2, a.y + a.h / 2, b.x + b.w / 2, b.y + b.h / 2, -70, 0.5);
+    const on = hot(lk.from) || hot(lk.to) || (S.selection && S.selection.type === 'link' && S.selection.id === lk.id);
+    const openF = lk.type === 'foreshadow' && lk.state !== 'closed';
+    gLinks.appendChild(mk('edge edge-link' + (openF ? ' open' : '') + (on ? ' hot' : ''), d, 'arrowLink'));
+    const hit = mk('edge-hit', d); hit.style.pointerEvents = 'stroke';
+    hit.addEventListener('click', e => { e.stopPropagation(); select('link', lk.id); });
+    hit.addEventListener('dblclick', e => { e.stopPropagation(); select('link', lk.id); });
+    gLinks.appendChild(hit);
+    const mid = curvePoint(a.x + a.w / 2, a.y + a.h / 2, b.x + b.w / 2, b.y + b.h / 2, -70, 0.5);
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', mid.x); t.setAttribute('y', mid.y); t.setAttribute('class', 'edge-label');
+    t.setAttribute('text-anchor', 'middle');
+    t.textContent = (lk.label || LINK_TYPES[lk.type].name) + (openF ? ' · 未回收' : '');
+    gLinks.appendChild(t);
+  }
+
+  for (const g of P.edges) {
+    const a = R(g.from), b = R(g.to);
+    const x1 = a.x + a.w, y1 = a.y + a.h / 2, x2 = b.x, y2 = b.y + b.h / 2;
+    const bow = S.selection && S.selection.type === 'event' &&
+                (S.selection.id === g.from || S.selection.id === g.to) ? 0 : 0;
+    const d = curve(x1, y1, x2, y2, bow, 0.42);
+    const isHot = hot(g.from) || hot(g.to);
+    gEdges.appendChild(mk('edge edge-dep' + (isHot ? ' hot' : ''), d, isHot ? 'arrowDepHot' : 'arrowDep'));
+    const hit = mk('edge-hit', d); hit.style.pointerEvents = 'stroke';
+    hit.addEventListener('click', e => { e.stopPropagation(); select('edge', g.id); });
+    gEdges.appendChild(hit);
+    const bits = [];
+    if (g.viaChoiceId) {
+      const src = eventById(g.from);
+      const ch = src ? src.choices.find(c => c.id === g.viaChoiceId) : null;
+      bits.push('「' + ((ch && ch.label) || '已删除选项') + '」');
+    }
+    if (g.requirements.length) {
+      const names = g.requirements.map(r => (REQ_TYPES[r.type] ? REQ_TYPES[r.type].name : '条件') + ':' + (r.key || '—'));
+      bits.push('⛓ ' + names.join('，'));
+    }
+    if (bits.length) {
+      const mid = curvePoint(x1, y1, x2, y2, bow, 0.42);
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', mid.x); t.setAttribute('y', mid.y - 4);
+      t.setAttribute('class', 'edge-label'); t.setAttribute('text-anchor', 'middle');
+      t.textContent = bits.join(' · ');
+      gEdges.appendChild(t);
+    }
+  }
+  // 拖拽中的幽灵线
+  const gGhost = $('#gGhost'); gGhost.innerHTML = '';
+  if (S.connecting) {
+    const a = R(S.connecting.from);
+    const d = curve(a.x + a.w, a.y + a.h / 2, S.connecting.toX, S.connecting.toY, 0, 0.42);
+    gGhost.appendChild(mk('edge edge-ghost', d, null));
+  }
+}
+function curve(x1, y1, x2, y2, bow, k) {
+  const dx = Math.max(46, Math.abs(x2 - x1) * k);
+  const my = (y1 + y2) / 2 + bow;
+  return 'M' + x1 + ',' + y1 + ' C' + (x1 + dx) + ',' + y1 + ' ' + (x2 - dx) + ',' + y2 + ' ' + x2 + ',' + y2;
+}
+function curvePoint(x1, y1, x2, y2, bow, t) {
+  const dx = Math.max(46, Math.abs(x2 - x1) * 0.42);
+  const p0 = { x: x1, y: y1 }, p1 = { x: x1 + dx, y: y1 },
+        p2 = { x: x2 - dx, y: y2 }, p3 = { x: x2, y: y2 };
+  const mt = 1 - t;
+  return {
+    x: mt * mt * mt * p0.x + 3 * mt * mt * t * p1.x + 3 * mt * t * t * p2.x + t * t * t * p3.x,
+    y: mt * mt * mt * p0.y + 3 * mt * mt * t * p1.y + 3 * mt * t * t * p2.y + t * t * t * p3.y
+  };
+}
+function initArrowDefs() {
+  const defs = $('#svgLayer defs');
+  defs.innerHTML =
+    '<marker id="arrowDep" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">' +
+      '<path d="M0,0 L10,5 L0,10 z" class="arrow-head"/></marker>' +
+    '<marker id="arrowDepHot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">' +
+      '<path d="M0,0 L10,5 L0,10 z" class="arrow-head hot"/></marker>' +
+    '<marker id="arrowLink" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">' +
+      '<path d="M0,0 L10,5 L0,10 z" class="arrow-head-link"/></marker>';
+}
+
+/* ============================================================================
+   9 · 交互：节点拖拽与连线
+   ========================================================================== */
+const MINW = 12;
+
+/* 事件兼容层。
+   同时支持 Pointer Events 与 Mouse Events：鼠标走 mousedown / mousemove / mouseup，
+   触摸与手写笔走 pointer 系列。只绑 pointer 系列在部分嵌入环境或自动化工具里会完全失灵，
+   两套都绑又会重复触发，所以用 pointerType 做分流——鼠标的 pointer 事件一律让给 mouse 事件处理。
+   函数返回解绑函数。 */
+function onDown(target, handler) {
+  target.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') handler(e); });
+  target.addEventListener('mousedown', handler);
+}
+function onWindowMove(handler) {
+  const pm = e => { if (e.pointerType === 'mouse') return; handler(e); };
+  window.addEventListener('pointermove', pm);
+  window.addEventListener('mousemove', handler);
+  return function () { window.removeEventListener('pointermove', pm); window.removeEventListener('mousemove', handler); };
+}
+function onWindowUp(handler) {
+  const pu = e => { if (e.pointerType === 'mouse') return; handler(e); };
+  window.addEventListener('pointerup', pu);
+  window.addEventListener('mouseup', handler);
+  return function () { window.removeEventListener('pointerup', pu); window.removeEventListener('mouseup', handler); };
+}
+
+function onNodePointerDown(e) {
+  if (e.button !== 0) return;
+  const nodeEl = e.currentTarget;
+  const id = nodeEl.dataset.id;
+  const ev = eventById(id);
+  if (!ev) return;
+  e.stopPropagation();
+
+  const handle = e.target.classList && e.target.classList.contains('handle') ? e.target : null;
+  if (handle) { startConnecting(ev, handle.classList.contains('l') ? 'l' : 'r', e); return; }
+
+  // Shift 点击 = 加选 / 取消加选
+  if (e.shiftKey) {
+    if (S.multi.has(id)) S.multi.delete(id); else S.multi.add(id);
+    S.selection = { type: 'event', id: id };
+    renderCanvas(); renderInspector(); renderLeft();
+    return;
+  }
+  // 普通点击把加选收敛为单选
+  if (S.multi.size) { S.multi.clear(); renderLeft(); }
+
+  if (S.linkMode) { selectQuiet('event', id); handleLinkClick(id); return; }
+
+  const start = screenToWorld(e.clientX, e.clientY);
+  const o = { t: ev.t, y: ev.y };
+  let moved = false;
+  pushUndo();
+  dragging = true;
+  // 注意：这里只做就地选中，不能整块重渲染，否则正在被按住的节点元素会被销毁，拖拽就断了
+  selectQuiet('event', id);
+  nodeEl.classList.add('dragging');
+
+  const offMove = onWindowMove(me => {
+    const w = screenToWorld(me.clientX, me.clientY);
+    let nt = o.t + (w.x - start.x), ny = o.y + (w.y - start.y);
+    // Ctrl 拖动 = 锁定单轴移动
+    if (me.ctrlKey) { if (Math.abs(nt - o.t) > Math.abs(ny - o.y)) ny = o.y; else nt = o.t; }
+    ev.t = Math.round(nt); ev.y = Math.round(ny);
+    for (const id of S.multi) {
+      if (id === ev.id) continue;
+      const other = document.querySelector('#nodeLayer .node[data-id="' + id + '"]');
+      const oe = eventById(id);
+      if (other && oe) { oe.t = Math.round(o.t + (w.x - start.x)); oe.y = Math.round(o.y + (w.y - start.y)); other.style.left = oe.t + 'px'; other.style.top = oe.y + 'px'; }
+    }
+    nodeEl.style.left = ev.t + 'px'; nodeEl.style.top = ev.y + 'px';
+    if (Math.abs(nt - o.t) > 1 || Math.abs(ny - o.y) > 1) moved = true;
+    redrawEdgesOnly();
+    renderInspectorLight();
+  });
+  const offUp = onWindowUp(() => {
+    offMove(); offUp();
+    dragging = false;
+    nodeEl.classList.remove('dragging');
+    if (!moved) { undoStack.pop(); updateHistoryButtons(); }
+    else { markDirty(); renderLeft(); renderInspector(); }
+  });
+}
+
+/** 就地选中：只改选中样式与两侧面板，不动节点 DOM，保证拖拽中的元素不被替换 */
+function selectQuiet(type, id) {
+  S.selection = { type: type, id: id };
+  $$('#nodeLayer .node').forEach(n => n.classList.toggle('sel', n.dataset.id === id));
+  renderInspector();
+  renderLeft();
+  renderAiStatus();
+  redrawEdgesOnly();
+}
+
+function redrawEdgesOnly() {
+  const rects = {};
+  $$('#nodeLayer .node').forEach(n => {
+    rects[n.dataset.id] = { x: n.offsetLeft, y: n.offsetTop, w: n.offsetWidth, h: n.offsetHeight };
+  });
+  drawEdges(rects, null);
+}
+
+function startConnecting(ev, side, e) {
+  e.stopPropagation();
+  pushUndo();
+  dragging = true;
+  S.connecting = { from: ev.id, side: side, toX: ev.t + (side === 'r' ? NODE_W : 0), toY: ev.y + 30, link: !!e.altKey || S.linkMode };
+  const offMove = onWindowMove(me => {
+    const w = screenToWorld(me.clientX, me.clientY);
+    S.connecting.toX = w.x; S.connecting.toY = w.y;
+    S.connecting.link = !!me.altKey || S.linkMode;
+    redrawEdgesOnly();
+  });
+  const offUp = onWindowUp(me => {
+    offMove(); offUp();
+    dragging = false;
+    const over = document.elementFromPoint(me.clientX, me.clientY);
+    const tgt = over && over.closest ? over.closest('.node') : null;
+    const targetId = tgt ? tgt.dataset.id : '';
+    const link = !!me.altKey || S.linkMode;
+    S.connecting = null;
+    if (!targetId || targetId === ev.id) { undoStack.pop(); updateHistoryButtons(); renderCanvas(); return; }
+    if (side === 'r') connect(ev.id, targetId, link);
+    else connect(targetId, ev.id, link);
+  });
+  renderCanvas();
+}
+
+function connect(fromId, toId, link) {
+  if (fromId === toId) return;
+  if (link) {
+    if (P.links.some(g => g.from === fromId && g.to === toId)) { toast('这条引用线已存在'); return; }
+    P.links.push({ id: uid('lk'), from: fromId, to: toId, type: 'influence', label: '', note: '' });
+    toast('已创建引用线', 'ok');
+  } else {
+    if (P.edges.some(g => g.from === fromId && g.to === toId)) { toast('这条依赖已存在'); return; }
+    const g = { id: uid('ed'), from: fromId, to: toId, viaChoiceId: '', requirements: [], note: '' };
+    P.edges.push(g);
+    const src = eventById(fromId);
+    S.selection = { type: 'edge', id: g.id };
+    toast('已创建依赖' + (src && src.choices.length ? '（可在右侧指定由哪个选项触发）' : ''), 'ok');
+  }
+  undoStack.pop();
+  pushUndo();
+  markDirty();
+  renderAll();
+}
+
+/* 引用线模式的点选两下 */
+function handleLinkClick(id) {
+  if (!S.linkAnchor) { S.linkAnchor = id; toast('已选择起点，再点一个事件作为终点'); renderCanvas(); return; }
+  if (S.linkAnchor === id) { S.linkAnchor = ''; renderCanvas(); return; }
+  const a = S.linkAnchor; S.linkAnchor = '';
+  pushUndo();
+  connect(a, id, true);
+}
+
+/* ============================================================================
+   10 · 交互：分割线拖拽与章节切分
+   ========================================================================== */
+function startDividerDrag(e) {
+  if (e.button !== 0) return;
+  e.stopPropagation();
+  const axisId = e.currentTarget.dataset.axis;
+  const parentId = e.currentTarget.dataset.parent;
+  const idx = Number(e.currentTarget.dataset.index);
+  const ax = axisById(axisId);
+  if (!ax) return;
+  const parent = parentId ? pathOfChapter(ax, parentId)[0] : null;
+  const list = parent ? (parent.children || []) : ax.chapters;
+  if (list.length < 2 && !parent) { /* 单章节时仍然可拖左右两端 */ }
+  pushUndo();
+  dragging = true;
+
+  const offMove = onWindowMove(me => {
+    const t = screenToWorld(me.clientX, me.clientY).x;
+    if (parent) {
+      if (idx <= 0 || idx >= list.length) return;      // 子章节外侧边界锁定在父章节范围内
+      const a = list[idx - 1], b = list[idx];
+      const v = clamp(t, a.start + MINW, b.end - MINW);
+      a.end = v; b.start = v;
+    } else {
+      if (idx <= 0) {
+        list[0].start = Math.min(t, list[0].end - MINW);
+      } else if (idx >= list.length) {
+        list[list.length - 1].end = Math.max(t, list[list.length - 1].start + MINW);
+      } else {
+        const a = list[idx - 1], b = list[idx];
+        const v = clamp(t, a.start + MINW, b.end - MINW);
+        a.end = v; b.start = v;
+      }
+      for (const c of ax.chapters) clampChildren(c);
+    }
+    renderAxisLayer(); renderCanvas();
+  });
+  const offUp = onWindowUp(() => {
+    offMove(); offUp();
+    dragging = false;
+    markDirty(); renderInspector(); renderLeft();
+  });
+}
+
+function clampChildren(parent) {
+  const kids = parent.children || [];
+  if (!kids.length) return;
+  kids.sort((a, b) => a.start - b.start);
+  kids[0].start = parent.start;
+  kids[kids.length - 1].end = parent.end;
+  for (let i = 1; i < kids.length; i++) kids[i].start = kids[i - 1].end;
+  parent.children = kids.filter(k => k.end > k.start);
+}
+
+/** 在某处切一刀，两侧即两个章节（分割线是唯一的创建方式） */
+function splitAt(axisId, parentId, t) {
+  const ax = axisById(axisId);
+  if (!ax) return;
+  const parent = parentId ? pathOfChapter(ax, parentId)[0] : null;
+  const list = parent ? parent.children : ax.chapters;
+  let i = list.findIndex(c => t > c.start + MINW && t < c.end - MINW);
+  if (i < 0) { toast('请在章节内部切分（离边界太近）', 'warn'); return; }
+  pushUndo();
+  const cur = list[i];
+  const right = { id: uid('ch'), title: '新章节', brief: '', start: t, end: cur.end, children: [] };
+  cur.end = t;
+  if (cur.children && cur.children.length) {
+    const left = [], rt = [];
+    for (const c of cur.children) {
+      if (c.end <= t) left.push(c);
+      else if (c.start >= t) rt.push(c);
+      else {
+        const c2 = clone(c); c2.id = uid('ch');
+        c.end = t; c2.start = t;
+        c.children = [];
+        left.push(c); rt.push(c2);
+      }
+    }
+    cur.children = left; right.children = rt;
+  }
+  list.splice(i + 1, 0, right);
+  if (parent) clampChildren(parent);
+  markDirty();
+  S.selection = { type: 'chapter', id: right.id };
+  renderAll();
+  toast('已切出新章节', 'ok');
+}
+
+/* ============================================================================
+   11 · 画布：平移 / 缩放 / 新建
+   ========================================================================== */
+function initCanvasInteractions() {
+  const wrap = $('#canvasWrap');
+
+  onDown(wrap, e => {
+    if (e.button !== 0 && e.button !== 1) return;
+    if (e.target.closest('.node') || e.target.closest('.divider') || e.target.closest('.chip') ||
+        e.target.closest('.axis-tag') || e.target.closest('.floating') || e.target.closest('.legend') ||
+        e.target.closest('.edge-hit') || e.target.closest('.cv-hint')) return;
+
+    const marquee = e.shiftKey && e.button === 0;
+    const origin = { x: e.clientX, y: e.clientY, cx: S.camera.x, cy: S.camera.y };
+    let moved = false, last = { x: e.clientX, y: e.clientY };
+    let box = null;
+    if (marquee) {
+      e.preventDefault();
+      box = el('div', { class: 'marquee' });
+      wrap.appendChild(box);
+      wrap.style.cursor = 'crosshair';
+    } else {
+      wrap.style.cursor = 'grabbing';
+    }
+
+    const offMove = onWindowMove(me => {
+      last = { x: me.clientX, y: me.clientY };
+      const dx = me.clientX - origin.x, dy = me.clientY - origin.y;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved = true;
+      if (marquee) {
+        const r = wrap.getBoundingClientRect();
+        box.style.left = (Math.min(origin.x, me.clientX) - r.left) + 'px';
+        box.style.top = (Math.min(origin.y, me.clientY) - r.top) + 'px';
+        box.style.width = Math.abs(dx) + 'px';
+        box.style.height = Math.abs(dy) + 'px';
+      } else {
+        S.camera.x = origin.cx + dx;
+        S.camera.y = origin.cy + dy;
+        applyTransform();
+      }
+    });
+    const offUp = () => {
+      offMove(); offUp();
+      wrap.style.cursor = '';
+      if (marquee) {
+        if (box) box.remove();
+        selectInBox(origin.x, origin.y, last.x, last.y);
+        return;
+      }
+      if (moved) markDirty();
+      else { S.multi.clear(); select(null); }
+    };
+  });
+
+  wrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    if (e.shiftKey) {
+      S.camera.x -= e.deltaY;
+      applyTransform();
+      markDirty();
+      return;
+    }
+    zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.12 : 1 / 1.12);
+  }, { passive: false });
+
+  wrap.addEventListener('dblclick', e => {
+    if (e.target.closest('.node') || e.target.closest('.divider') || e.target.closest('.chip') ||
+        e.target.closest('.axis-tag') || e.target.closest('.floating')) return;
+    const w = screenToWorld(e.clientX, e.clientY);
+    createEventAt(w.x, w.y);
+  });
+}
+
+/* 框选：把中心点落在矩形内的事件加入加选集合 */
+function selectInBox(x1, y1, x2, y2) {
+  const a = screenToWorld(Math.min(x1, x2), Math.min(y1, y2));
+  const b = screenToWorld(Math.max(x1, x2), Math.max(y1, y2));
+  const hit = P.events.filter(ev => {
+    const cx = ev.t + NODE_W / 2, cy = ev.y + 26;
+    return cx >= a.x && cx <= b.x && cy >= a.y && cy <= b.y;
+  });
+  S.multi = new Set(hit.map(x => x.id));
+  S.selection = hit.length ? { type: 'event', id: hit[0].id } : null;
+  renderCanvas(); renderInspector(); renderLeft();
+  if (hit.length) toast('已框选 ' + hit.length + ' 个事件', 'ok', 1600);
+}
+
+function createEventAt(x, y) {
+  pushUndo();
+  const ev = newEvent(x, y);
+  const { chapter } = P.axes[0] ? chapterAt(P.axes[0], x) : { chapter: null };
+  ev.title = '新事件';
+  P.events.push(ev);
+  markDirty();
+  S.selection = { type: 'event', id: ev.id };
+  renderAll();
+  renderInspector();
+  setTimeout(() => { const t = $('#f-title'); if (t) { t.focus(); t.select(); } }, 30);
+}
+
+/* ============================================================================
+   12 · 键盘
+   ========================================================================== */
+function initKeyboard() {
+  window.addEventListener('keydown', e => {
+    const tag = (e.target.tagName || '').toLowerCase();
+    const editing = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+
+    if (e.ctrlKey && !e.shiftKey && e.key.toLowerCase() === 'z') { if (!editing) { e.preventDefault(); undo(); } return; }
+    if (e.ctrlKey && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
+      if (!editing) { e.preventDefault(); redo(); } return;
+    }
+    if (e.ctrlKey && e.key.toLowerCase() === 's') { e.preventDefault(); saveToServer(); toast('已保存', 'ok', 1200); return; }
+    if (editing) { if (e.key === 'Escape') e.target.blur(); return; }
+    const stp = e.shiftKey ? 10 : 1;
+    const ARROWS = { ArrowLeft: [-stp, 0], ArrowRight: [stp, 0], ArrowUp: [0, -stp], ArrowDown: [0, stp] };
+    if (ARROWS[e.key] && (S.selection || S.multi.size)) {
+      e.preventDefault();
+      nudgeSelection(ARROWS[e.key][0], ARROWS[e.key][1]);
+      return;
+    }
+    if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelection(); return; }
+    if (e.key === 'f' || e.key === 'F') { fitView(); return; }
+    if (e.key === 'a' && e.ctrlKey) {
+      e.preventDefault();
+      S.multi = new Set(P.events.map(x => x.id));
+      renderCanvas(); renderLeft(); renderInspector();
+      return;
+    }
+    if (e.key === 'Escape') {
+      S.linkMode = false; S.linkAnchor = ''; S.connecting = null;
+      S.multi.clear();
+      $('#btnLinkMode').classList.remove('on');
+      closeMask(); renderAll(); return;
+    }
+    if (e.key === ' ') { e.preventDefault(); }
+  });
+}
+
+/** 当前被选中的事件 id：优先加选集合，否则单选 */
+function selectedEventIds() {
+  if (S.multi.size) return Array.from(S.multi);
+  const s = S.selection;
+  return s && s.type === 'event' ? [s.id] : [];
+}
+/** 方向键微调：水平改逻辑时间，竖直改自由位置 */
+function nudgeSelection(dt, dy) {
+  const ids = selectedEventIds();
+  if (!ids.length) return;
+  pushUndo();
+  for (const id of ids) {
+    const ev = eventById(id);
+    if (!ev) continue;
+    ev.t += dt; ev.y += dy;
+    const n = document.querySelector('#nodeLayer .node[data-id="' + id + '"]');
+    if (n) { n.style.left = ev.t + 'px'; n.style.top = ev.y + 'px'; }
+  }
+  redrawEdgesOnly();
+  renderInspectorLight();
+  markDirty();
+  renderLeft();
+}
+
+function deleteSelection() {
+  // 加选模式下批量删除
+  if (S.multi.size) {
+    const n = S.multi.size;
+    pushUndo();
+    P.events = P.events.filter(x => !S.multi.has(x.id));
+    P.edges = P.edges.filter(g => !S.multi.has(g.from) && !S.multi.has(g.to));
+    P.links = P.links.filter(g => !S.multi.has(g.from) && !S.multi.has(g.to));
+    S.multi.clear();
+    S.selection = null;
+    markDirty(); renderAll();
+    toast('已删除 ' + n + ' 个事件及其连线');
+    return;
+  }
+  const s = S.selection;
+  if (!s) return;
+  pushUndo();
+  if (s.type === 'event') {
+    P.events = P.events.filter(x => x.id !== s.id);
+    P.edges = P.edges.filter(g => g.from !== s.id && g.to !== s.id);
+    P.links = P.links.filter(g => g.from !== s.id && g.to !== s.id);
+    toast('已删除事件及其全部连线');
+  } else if (s.type === 'edge') {
+    P.edges = P.edges.filter(g => g.id !== s.id);
+  } else if (s.type === 'link') {
+    P.links = P.links.filter(g => g.id !== s.id);
+  } else if (s.type === 'character') {
+    P.characters = P.characters.filter(x => x.id !== s.id);
+    P.events.forEach(ev => ev.characterIds = ev.characterIds.filter(i => i !== s.id));
+  } else if (s.type === 'place') {
+    P.places = P.places.filter(x => x.id !== s.id);
+    P.events.forEach(ev => ev.placeIds = ev.placeIds.filter(i => i !== s.id));
+  } else if (s.type === 'axis') {
+    P.axes = P.axes.filter(x => x.id !== s.id);
+    if (!P.axes.length) P.axes = newProject().axes;
+  } else if (s.type === 'chapter') {
+    for (const ax of P.axes) {
+      const p = pathOfChapter(ax, s.id);
+      if (!p) continue;
+      if (p.length === 2) {
+        const parent = p[0], kids = parent.children;
+        if (kids.length <= 1) { undoStack.pop(); updateHistoryButtons(); toast('至少要保留一个子章节', 'warn'); return; }
+        const i = kids.findIndex(k => k.id === s.id);
+        kids.splice(i, 1);
+        clampChildren(parent);
+      } else {
+        if (ax.chapters.length <= 1) { undoStack.pop(); updateHistoryButtons(); toast('至少要保留一个章节', 'warn'); return; }
+        const i = ax.chapters.findIndex(k => k.id === s.id);
+        ax.chapters.splice(i, 1);
+        if (i === 0) ax.chapters[0].start = p[0].start;
+        if (i === ax.chapters.length) ax.chapters[ax.chapters.length - 1].end = p[0].end;
+        for (const c of ax.chapters) clampChildren(c);
+      }
+      break;
+    }
+  } else { undoStack.pop(); updateHistoryButtons(); return; }
+  S.selection = null;
+  markDirty();
+  renderAll();
+}
+
+/* ============================================================================
+   13 · 左栏
+   ========================================================================== */
+const collapsed = { world: false, axes: false, chars: false, places: false, events: false, stats: true };
+
+function makeSection(key, title, count, onAdd, addTitle) {
+  const s = el('div', { class: 'section' + (collapsed[key] ? ' collapsed' : '') });
+  const h = el('div', { class: 'sec-head' },
+    '<span class="caret">▼</span><span>' + esc(title) + '</span>' +
+    (count != null ? '<span class="count">' + count + '</span>' : '') +
+    (onAdd ? '<span class="add" title="' + esc(addTitle || '新增') + '">+</span>' : ''));
+  h.addEventListener('click', e => {
+    if (e.target.classList.contains('add')) { e.stopPropagation(); onAdd(); return; }
+    collapsed[key] = !collapsed[key];
+    h.parentNode.classList.toggle('collapsed', collapsed[key]);
+  });
+  s.appendChild(h);
+  s.appendChild(el('div', { class: 'sec-body' }));
+  return s;
+}
+function body(s) { return s.querySelector('.sec-body'); }
+
+function rowItem(label, opts) {
+  opts = opts || {};
+  const r = el('div', { class: 'row' + (opts.sel ? ' sel' : '') + (opts.dim ? ' dim' : '') });
+  if (opts.color) r.appendChild(el('span', { class: 'swatch', style: 'background:' + opts.color }));
+  r.appendChild(el('span', { class: 'label' }, esc(label)));
+  if (opts.sub) r.appendChild(el('span', { class: 'sub' }, esc(opts.sub)));
+  if (opts.eyeFn) {
+    const b = el('span', { class: 'eye', title: '显示 / 隐藏这条轴' }, opts.eyeOn ? '◉' : '○');
+    b.addEventListener('click', e => { e.stopPropagation(); opts.eyeFn(); });
+    r.appendChild(b);
+  }
+  if (opts.kill) {
+    const b = el('span', { class: 'kill', title: '删除' }, '×');
+    b.addEventListener('click', e => { e.stopPropagation(); opts.kill(); });
+    r.appendChild(b);
+  }
+  if (opts.onClick) r.addEventListener('click', opts.onClick);
+  return r;
+}
+function isSel(type, id) { return S.selection && S.selection.type === type && S.selection.id === id; }
+
+function renderLeft() {
+  const host = $('#leftScroll');
+  if (!host) return;
+  // 左栏里有搜索框，重建后要把焦点与光标位置还原，否则每敲一个字就断
+  const act = document.activeElement;
+  const keepId = act && host.contains(act) && act.id ? act.id : '';
+  const caret = keepId && typeof act.selectionStart === 'number' ? act.selectionStart : 0;
+  host.innerHTML = '';
+
+  if (S.viewMode !== 'timeline') {
+    const focus = computeFocus();
+    const box = el('div', { class: 'hint-box', style: 'margin:10px;border-color:rgba(91,157,255,.3)' },
+      '<b>' + (S.viewMode === 'character' ? '角色视图' : '地点视图') + '</b><br>' +
+      (S.focusId
+        ? '正在聚焦「' + esc(focus.label) + '」，画布上无关事件已淡出。下方列表可切换焦点。'
+        : '请选择下方一个' + (S.viewMode === 'character' ? '角色' : '地点') + '作为焦点。'));
+    host.appendChild(box);
+  }
+
+  /* --- 世界观 --- */
+  const sW = makeSection('world', '世界观', null, null);
+  const bw = body(sW);
+  bw.appendChild(rowItem(P.world.brief ? firstLine(P.world.brief) : '（尚未填写世界观设定）', {
+    sel: isSel('world'), onClick: () => select('world')
+  }));
+  for (const sec of P.world.sections) {
+    bw.appendChild(rowItem(sec.title || '（无标题小节）', { onClick: () => { select('world'); setTimeout(() => {
+      const n = document.querySelector('[data-sec="' + sec.id + '"]'); if (n) n.scrollIntoView({ block: 'center' });
+    }, 60); } }));
+  }
+  host.appendChild(sW);
+
+  /* --- 轴与章节 --- */
+  const sA = makeSection('axes', '轴 / 章节', P.axes.length, () => addAxis(), '新增轴');
+  const ba = body(sA);
+  if (!P.axes.length) ba.appendChild(el('div', { class: 'empty-note' }, '还没有轴。轴是一条独立的时间逻辑。'));
+  for (const ax of P.axes) {
+    ba.appendChild(rowItem(ax.name, {
+      color: ax.color, sel: isSel('axis', ax.id), sub: ax.chapters.length + '章',
+      eyeFn: () => { pushUndo(); ax.visible = !ax.visible; markDirty(); renderAll(); },
+      eyeOn: ax.visible,
+      onClick: () => select('axis', ax.id)
+    }));
+    if (ax.visible === false) ba.lastChild.classList.add('dim');
+    for (const ch of ax.chapters) {
+      ba.appendChild(rowItem(ch.title || '（未命名章节）', {
+        sel: isSel('chapter', ch.id), sub: fmtNum(ch.start) + '–' + fmtNum(ch.end),
+        onClick: () => { select('chapter', ch.id); scrollChapterIntoView(ch); }
+      }));
+      for (const sub of (ch.children || [])) {
+        const r = rowItem(sub.title || '（未命名子章节）', {
+          sel: isSel('chapter', sub.id), sub: fmtNum(sub.start) + '–' + fmtNum(sub.end),
+          onClick: () => { select('chapter', sub.id); scrollChapterIntoView(sub); }
+        });
+        r.classList.add('indent-1');
+        ba.appendChild(r);
+      }
+    }
+  }
+  host.appendChild(sA);
+
+  /* --- 角色 --- */
+  const sC = makeSection('chars', '角色', P.characters.length, () => addCharacter(), '新增角色');
+  const bc = body(sC);
+  if (!P.characters.length) bc.appendChild(el('div', { class: 'empty-note' }, '还没有角色。角色会在画布与角色视图中被引用。'));
+  for (const c of P.characters) {
+    const n = P.events.filter(e => e.characterIds.includes(c.id)).length;
+    const r = rowItem(c.name, {
+      color: c.color || '#f06060', sel: isSel('character', c.id), sub: n + '事件',
+      kill: () => { S.selection = { type: 'character', id: c.id }; deleteSelection(); },
+      onClick: () => {
+        if (S.viewMode === 'character') { S.focusId = c.id; select('character', c.id); fitView(); }
+        else select('character', c.id);
+      }
+    });
+    bc.appendChild(r);
+  }
+  host.appendChild(sC);
+
+  /* --- 地点 --- */
+  const sP = makeSection('places', '地点', P.places.length, () => addPlace(), '新增地点');
+  const bp = body(sP);
+  if (!P.places.length) bp.appendChild(el('div', { class: 'empty-note' }, '还没有地点。'));
+  for (const c of P.places) {
+    const n = P.events.filter(e => e.placeIds.includes(c.id)).length;
+    const r = rowItem(c.name, {
+      color: c.color || '#b07cff', sel: isSel('place', c.id), sub: n + '事件',
+      kill: () => { S.selection = { type: 'place', id: c.id }; deleteSelection(); },
+      onClick: () => {
+        if (S.viewMode === 'place') { S.focusId = c.id; select('place', c.id); fitView(); }
+        else select('place', c.id);
+      }
+    });
+    if (c.parentId) r.classList.add('indent-1');
+    bp.appendChild(r);
+  }
+  host.appendChild(sP);
+
+  /* --- 事件 --- */
+  const sE = makeSection('events', '事件', P.events.length, () => {
+    const box = $('#canvasWrap').getBoundingClientRect();
+    const w = screenToWorld(box.left + box.width / 2, box.top + box.height / 2);
+    createEventAt(w.x, w.y);
+  }, '新增事件');
+  const be = body(sE);
+  be.appendChild(el('div', { class: 'search-row' },
+    '<input class="inp" id="evSearch" placeholder="搜索标题 / 设定 / 步骤…" value="' + esc(S.search) + '" spellcheck="false">' +
+    '<select class="sel" id="evKind" style="width:76px;flex:0 0 76px">' +
+      '<option value="all"' + (S.kindFilter === 'all' ? ' selected' : '') + '>全部</option>' +
+      '<option value="main"' + (S.kindFilter === 'main' ? ' selected' : '') + '>主线</option>' +
+      '<option value="side"' + (S.kindFilter === 'side' ? ' selected' : '') + '>支线</option>' +
+    '</select>' +
+    '<select class="sel" id="evTrig" style="width:76px;flex:0 0 76px">' +
+      '<option value="all"' + (S.trigFilter === 'all' ? ' selected' : '') + '>触发</option>' +
+      '<option value="passive"' + (S.trigFilter === 'passive' ? ' selected' : '') + '>被动</option>' +
+      '<option value="active"' + (S.trigFilter === 'active' ? ' selected' : '') + '>主动</option>' +
+    '</select>'));
+  const listBox = el('div', { id: 'evList' });
+  be.appendChild(listBox);
+  // 注意：此时 sE 还没插进文档，必须用局部查询，否则拿不到这些元素
+  fillEventList(listBox, be.querySelector('#evSearch'), be);
+  host.appendChild(sE);
+
+  /* --- 悬空伏笔 --- */
+  const hooks = P.links.filter(l => l.type === 'foreshadow' && l.state !== 'closed');
+  const sH = makeSection('hooks', '悬空伏笔', hooks.length, null);
+  const bh = body(sH);
+  if (!hooks.length) bh.appendChild(el('div', { class: 'empty-note' }, '没有未回收的伏笔。'));
+  for (const lk of hooks) {
+    const a = eventById(lk.from), z = eventById(lk.to);
+    const r = rowItem((a ? a.title : '?') + ' → ' + (z ? z.title : '?'), {
+      color: 'var(--warn)',
+      sel: isSel('link', lk.id),
+      sub: lk.label || '未回收',
+      onClick: () => { select('link', lk.id); if (a) centerOn(a); }
+    });
+    bh.appendChild(r);
+  }
+  host.appendChild(sH);
+
+  /* --- 数据概览 --- */
+  const sS = makeSection('stats', '概览', null, null);
+  const bs = body(sS);
+  const orphan = P.events.filter(e => !P.edges.some(g => g.from === e.id || g.to === e.id)).length;
+  const openChoice = P.events.reduce((n, e) => n + e.choices.filter(c => !P.edges.some(g => g.viaChoiceId === c.id)).length, 0);
+  const noScene = P.events.filter(e => !e.scene.steps.length).length;
+  bs.appendChild(el('div', { class: 'meta-list' },
+    statsRow('事件 / 依赖 / 引用', P.events.length + ' / ' + P.edges.length + ' / ' + P.links.length) +
+    statsRow('孤立事件', orphan + ' 个') +
+    statsRow('未闭合的选择支', openChoice + ' 个') +
+    statsRow('悬空伏笔', hooks.length + ' 个') +
+    statsRow('带门槛的依赖', P.edges.filter(g => g.requirements.length).length + ' 条') +
+    statsRow('无剧情细节的事件', noScene + ' 个')));
+  host.appendChild(sS);
+  if (collapsed.stats === undefined) collapsed.stats = true;
+
+  if (keepId) {
+    const n = $('#' + keepId);
+    if (n && n.focus) { n.focus(); try { n.setSelectionRange(caret, caret); } catch (e) {} }
+  }
+}
+
+/** 事件列表的过滤结果。搜索与筛选同时作用于左栏列表和画布上的节点明暗 */
+function matchesFilter(ev) {
+  const q = (S.search || '').trim().toLowerCase();
+  if (q) {
+    const hay = (ev.title + ' ' + ev.summary + ' ' + ev.brief + ' ' +
+      (ev.tags || []).join(' ') + ' ' +
+      ev.scene.steps.map(s => JSON.stringify(s.fields)).join(' ')).toLowerCase();
+    if (hay.indexOf(q) < 0) return false;
+  }
+  if (S.kindFilter !== 'all' && ev.kind !== S.kindFilter) return false;
+  if (S.trigFilter !== 'all' && ev.trigger !== S.trigFilter) return false;
+  return true;
+}
+function fillEventList(box, searchInput, scope) {
+  scope = scope || box.parentNode || document;
+  if (searchInput && !searchInput.dataset.wired) {
+    searchInput.dataset.wired = '1';
+    searchInput.addEventListener('input', () => { S.search = searchInput.value; refreshEventList(); });
+    const k = scope.querySelector('#evKind'), t = scope.querySelector('#evTrig');
+    if (k) k.addEventListener('change', () => { S.kindFilter = k.value; refreshEventList(); });
+    if (t) t.addEventListener('change', () => { S.trigFilter = t.value; refreshEventList(); });
+  }
+  box.innerHTML = '';
+  if (!P.events.length) {
+    box.appendChild(el('div', { class: 'empty-note' }, '还没有事件。双击画布空白处即可创建。'));
+    return;
+  }
+  const list = P.events.filter(matchesFilter).sort((a, b) => a.t - b.t);
+  if (!list.length) {
+    box.appendChild(el('div', { class: 'empty-note' }, '没有匹配的事件。'));
+    return;
+  }
+  for (const ev of list) {
+    const hook = P.links.some(l => l.type === 'foreshadow' && l.state !== 'closed' && l.from === ev.id);
+    const r = rowItem(ev.title, {
+      color: ev.kind === 'main' ? 'var(--main)' : 'var(--side)',
+      sel: isSel('event', ev.id) || S.multi.has(ev.id),
+      sub: (hook ? '伏笔 · ' : '') + (ev.trigger === 'active' ? '主动' : '被动'),
+      onClick: () => { select('event', ev.id); centerOn(ev); }
+    });
+    box.appendChild(r);
+  }
+}
+/** 只刷新列表与画布明暗，不重建整栏，避免搜索框失焦 */
+function refreshEventList() {
+  const box = $('#evList');
+  if (!box) { renderLeft(); return; }
+  fillEventList(box, null, box.parentNode);
+  renderCanvas();
+}
+function statsRow(k, v) { return '<div class="meta-row"><b>' + esc(k) + '</b><span>' + esc(v) + '</span></div>'; }
+function firstLine(s) { const t = String(s).split('\n')[0]; return t.length > 26 ? t.slice(0, 26) + '…' : (t || '（空）'); }
+function scrollChapterIntoView(ch) {
+  const w = (ch.start + ch.end) / 2;
+  const box = $('#canvasWrap').getBoundingClientRect();
+  S.camera.x = box.width / 2 - w * S.camera.zoom;
+  applyTransform(); markDirty();
+}
+function centerOn(ev) {
+  const box = $('#canvasWrap').getBoundingClientRect();
+  S.camera.x = box.width / 2 - (ev.t + NODE_W / 2) * S.camera.zoom;
+  S.camera.y = box.height / 2 - (ev.y + 50) * S.camera.zoom;
+  applyTransform(); markDirty();
+  renderCanvas();
+}
+
+function addAxis() {
+  pushUndo();
+  const ax = {
+    id: uid('ax'), name: '新轴', color: AXIS_PALETTE[P.axes.length % AXIS_PALETTE.length],
+    visible: true, brief: '',
+    chapters: [{ id: uid('ch'), title: '第一章', brief: '', start: 0, end: 1000, children: [] }]
+  };
+  P.axes.push(ax);
+  markDirty(); select('axis', ax.id);
+  toast('已新增一条轴', 'ok');
+}
+function addCharacter() {
+  pushUndo();
+  const c = { id: uid('ch'), name: '新角色', aliases: [], color: '#f06060', brief: '', tags: [] };
+  P.characters.push(c); markDirty(); select('character', c.id);
+}
+function addPlace() {
+  pushUndo();
+  const c = { id: uid('pl'), name: '新地点', parentId: '', color: '#b07cff', brief: '', tags: [] };
+  P.places.push(c); markDirty(); select('place', c.id);
+}
+
+/* ============================================================================
+   14 · 右栏检查器
+   ========================================================================== */
+function field(label, inner, hint) {
+  return '<div class="field"><label>' + esc(label) + '</label>' + inner +
+         (hint ? '<div style="font-size:10.5px;color:var(--text-faint);margin-top:4px">' + hint + '</div>' : '') + '</div>';
+}
+function inp(prop, value, ph, type) {
+  return '<input class="inp" data-set="' + prop + '" type="' + (type || 'text') + '" value="' + esc(value) +
+         '" placeholder="' + esc(ph || '') + '" spellcheck="false">';
+}
+function ta(prop, value, ph, rows) {
+  return '<textarea class="ta" data-set="' + prop + '" rows="' + (rows || 4) + '" placeholder="' + esc(ph || '') + '">' +
+         esc(value) + '</textarea>';
+}
+function selBox(prop, value, options) {
+  let h = '<select class="sel" data-set="' + prop + '">';
+  for (const k in options) h += '<option value="' + k + '"' + (k === value ? ' selected' : '') + '>' + esc(options[k]) + '</option>';
+  return h + '</select>';
+}
+function chipList(kind, values, allFn, nameFn, placeholder) {
+  let h = '<div class="chip-list">';
+  for (const v of values) {
+    h += '<span class="chip-tag"><b>' + esc(nameFn(v) || '已删除') + '</b>' +
+         '<button data-chipdel="' + kind + ':' + v + '" title="移除">×</button></span>';
+  }
+  h += '</div>';
+  const all = allFn().filter(x => !values.includes(x.id));
+  h += '<div class="picker" style="margin-top:6px"><select class="sel" data-chipadd="' + kind + '">' +
+       '<option value="">' + esc(placeholder) + '</option>' +
+       all.map(x => '<option value="' + x.id + '">' + esc(x.name) + '</option>').join('') +
+       '</select></div>';
+  return h;
+}
+
+function renderInspector() {
+  const host = $('#inspector');
+  const s = S.selection;
+  if (S.multi.size > 1) return inspBatch(host);
+  if (!s) {
+    host.innerHTML = '<div class="insp-empty">' +
+      '未选中任何对象。<br><br>' +
+      '单击事件查看属性，双击事件编辑剧情细节。<br>' +
+      'Shift+点击 加选，Shift+拖拽空白 框选。<br><br>' +
+      '<span class="kbd">双击空白</span> 新建事件 &nbsp; <span class="kbd">方向键</span> 微调位置 &nbsp; <span class="kbd">F</span> 适应视图</div>';
+    return;
+  }
+  if (s.type === 'event') return inspEvent(host, eventById(s.id) || missing(host));
+  if (s.type === 'axis') return inspAxis(host, axisById(s.id) || missing(host));
+  if (s.type === 'chapter') return inspChapter(host, findChapter(s.id) || missing(host));
+  if (s.type === 'character') return inspCharacter(host, charById(s.id) || missing(host));
+  if (s.type === 'place') return inspPlace(host, placeById(s.id) || missing(host));
+  if (s.type === 'edge') return inspEdge(host, P.edges.find(g => g.id === s.id) || missing(host));
+  if (s.type === 'link') return inspLink(host, P.links.find(g => g.id === s.id) || missing(host));
+  if (s.type === 'world') return inspWorld(host);
+  host.innerHTML = '<div class="insp-empty">未知对象</div>';
+}
+function missing(host) { host.innerHTML = '<div class="insp-empty">对象已被删除</div>'; return null; }
+/** 返回 {ch, axis, path}。绝不把轴引用挂到章节对象上，否则 JSON 序列化会遇到循环引用 */
+function findChapter(id) {
+  for (const ax of P.axes) {
+    const p = pathOfChapter(ax, id);
+    if (p) return { ch: p[p.length - 1], axis: ax, path: p };
+  }
+  return null;
+}
+
+function head(host, title, sub) {
+  host.innerHTML = '<div class="insp"><div class="insp-title">' + esc(title) + '</div>' +
+                   '<div class="insp-sub">' + esc(sub) + '</div><div id="inspBody"></div></div>';
+  return $('#inspBody', host);
+}
+function wireInspector(scope) {
+  const host = $('#inspector');
+  $$('[data-set]', host).forEach(node => {
+    const prop = node.dataset.set;
+    const handler = () => {
+      let v = node.type === 'checkbox' ? node.checked : node.value;
+      if (node.type === 'number') v = v === '' ? 0 : Number(v);
+      applySet(scope, prop, v);
+    };
+    if (node.tagName === 'SELECT') node.addEventListener('change', handler);
+    else node.addEventListener('input', handler);
+  });
+  $$('[data-act]', host).forEach(node => {
+    node.addEventListener('click', () => doAct(node.dataset.act, scope, node));
+  });
+  $$('[data-chipdel]', host).forEach(node => {
+    node.addEventListener('click', () => {
+      const [kind, id] = node.dataset.chipdel.split(':');
+      const ev = scope;
+      if (kind === 'char') ev.characterIds = ev.characterIds.filter(x => x !== id);
+      if (kind === 'place') ev.placeIds = ev.placeIds.filter(x => x !== id);
+      commit();
+    });
+  });
+  $$('[data-chipadd]', host).forEach(node => {
+    node.addEventListener('change', () => {
+      const kind = node.dataset.chipadd;
+      if (!node.value) return;
+      if (kind === 'char' && !scope.characterIds.includes(node.value)) scope.characterIds.push(node.value);
+      if (kind === 'place' && !scope.placeIds.includes(node.value)) scope.placeIds.push(node.value);
+      commit();
+    });
+  });
+}
+function commit() { markDirty(); renderLeft(); renderCanvas(); renderInspector(); }
+
+/* 当前检查器作用域。用独立变量而不是往数据对象上挂标记，避免污染导出的 JSON */
+let INSP = { kind: '', obj: null };
+
+function applySet(obj, prop, v) {
+  if (!obj) return;
+  if (prop === 'tags') obj.tags = String(v).split(/[,，\s]+/).filter(Boolean);
+  else if (prop === 'aliases') obj.aliases = String(v).split(/[,，\s]+/).filter(Boolean);
+  else if (prop === 'visible') obj.visible = (v === true || v === 'true');
+  else obj[prop] = v;
+
+  const kind = INSP.kind;
+  if (kind === 'event') {
+    const n = document.querySelector('#nodeLayer .node[data-id="' + obj.id + '"]');
+    if (prop === 't' || prop === 'y') {
+      if (n) { n.style.left = obj.t + 'px'; n.style.top = obj.y + 'px'; }
+      redrawEdgesOnly();
+    } else {
+      renderCanvas();
+    }
+  } else if (kind === 'axis' || kind === 'chapter' || kind === 'character' || kind === 'place') {
+    renderCanvas();
+  }
+  markDirty();
+  renderLeft();
+}
+
+/* ---- 批量操作 ---- */
+function inspBatch(host) {
+  INSP = { kind: 'batch', obj: null };
+  const evs = Array.from(S.multi).map(eventById).filter(Boolean);
+  const b = head(host, '已选中 ' + evs.length + ' 个事件', '批量操作');
+  const addSel = (kind, list, label) =>
+    '<select class="sel" data-batch-add="' + kind + '"><option value="">' + esc(label) + '</option>' +
+    list.map(x => '<option value="' + x.id + '">' + esc(x.name) + '</option>').join('') + '</select>';
+  b.innerHTML =
+    '<div class="hint-box">批量操作作用于全部选中项。位置微调也可以用方向键（按住 Shift 加速 10 倍）。</div>' +
+    '<div class="batch-bar">' +
+      '<button class="btn sm" data-batch="kind:main">设为主线</button>' +
+      '<button class="btn sm" data-batch="kind:side">设为支线</button>' +
+      '<button class="btn sm" data-batch="trigger:passive">设为被动</button>' +
+      '<button class="btn sm" data-batch="trigger:active">设为主动</button>' +
+    '</div>' +
+    '<div class="batch-bar">' +
+      '<button class="btn sm" data-batch="nudge:0:-40">上移 40</button>' +
+      '<button class="btn sm" data-batch="nudge:0:40">下移 40</button>' +
+      '<button class="btn sm" data-batch="nudge:-40:0">左移 40</button>' +
+      '<button class="btn sm" data-batch="nudge:40:0">右移 40</button>' +
+    '</div>' +
+    '<div style="height:10px"></div>' +
+    field('批量加入角色', addSel('char', P.characters, '选择角色…')) +
+    field('批量加入地点', addSel('place', P.places, '选择地点…')) +
+    '<div class="batch-bar">' +
+      '<button class="btn sm" data-batch="clear">取消选择</button>' +
+      '<button class="btn sm danger" data-batch="del">删除这 ' + evs.length + ' 个事件</button>' +
+    '</div>' +
+    '<div class="field" style="margin-top:14px"><label>选中项</label><div class="dep-list">' +
+      evs.slice(0, 30).map(e => '<div class="dep-item" data-goto="' + e.id + '">' +
+        '<span class="t">' + esc(e.title) + '</span><span class="dir">t=' + Math.round(e.t) + '</span></div>').join('') +
+      (evs.length > 30 ? '<div class="empty-note">…还有 ' + (evs.length - 30) + ' 个</div>' : '') +
+    '</div></div>';
+  $$('[data-batch]', host).forEach(n => n.addEventListener('click', () => batchAct(n.dataset.batch)));
+  $$('[data-batch-add]', host).forEach(n => n.addEventListener('change', () => {
+    if (!n.value) return;
+    pushUndo();
+    for (const e of evs) {
+      if (n.dataset.batchAdd === 'char' && !e.characterIds.includes(n.value)) e.characterIds.push(n.value);
+      if (n.dataset.batchAdd === 'place' && !e.placeIds.includes(n.value)) e.placeIds.push(n.value);
+    }
+    markDirty(); renderAll();
+  }));
+  $$('[data-goto]', host).forEach(n => n.addEventListener('click', () => {
+    const t = eventById(n.dataset.goto); if (t) { select('event', t.id); centerOn(t); }
+  }));
+}
+function batchAct(cmd) {
+  if (cmd === 'clear') { S.multi.clear(); S.selection = null; renderAll(); return; }
+  if (cmd === 'del') { deleteSelection(); return; }
+  const ids = Array.from(S.multi);
+  if (!ids.length) return;
+  pushUndo();
+  const parts = cmd.split(':');
+  for (const id of ids) {
+    const ev = eventById(id);
+    if (!ev) continue;
+    if (parts[0] === 'kind') ev.kind = parts[1];
+    else if (parts[0] === 'trigger') ev.trigger = parts[1];
+    else if (parts[0] === 'nudge') { ev.t += Number(parts[1]) || 0; ev.y += Number(parts[2]) || 0; }
+  }
+  markDirty(); renderAll();
+  toast('已修改 ' + ids.length + ' 个事件', 'ok', 1600);
+}
+
+/* ---- 事件 ---- */
+function inspEvent(host, ev) {
+  if (!ev) return;
+  INSP = { kind: 'event', obj: ev };
+  const d = deps();
+  const inDeps = d.inc[ev.id], outDeps = d.out[ev.id];
+  const b = head(host, ev.title, ev.id);
+
+  const derived = P.axes.filter(a => a.visible).map(a => {
+    const { chapter, sub } = chapterAt(a, ev.t);
+    return a.name + '：' + (chapter ? chapter.title || '未命名' : '—') + (sub ? ' / ' + (sub.title || '未命名') : '');
+  });
+
+  b.innerHTML =
+    field('标题', inp('title', ev.title, '事件标题')) +
+    '<div class="two">' +
+      field('类别', selBox('kind', ev.kind, KINDS)) +
+      field('触发方式', selBox('trigger', ev.trigger, TRIGGERS)) +
+    '</div>' +
+    '<div class="two">' +
+      field('逻辑时间 t', inp('t', ev.t, '0', 'number')) +
+      field('纵向 y', inp('y', ev.y, '0', 'number')) +
+    '</div>' +
+    field('一句话摘要', inp('summary', ev.summary, '在节点卡片上显示')) +
+    field('详细设定', ta('brief', ev.brief, '这个事件发生了什么、为什么重要、有哪些暗线', 6)) +
+    field('地点', chipList('place', ev.placeIds, () => P.places, id => { const p = placeById(id); return p && p.name; }, '添加地点…')) +
+    field('角色', chipList('char', ev.characterIds, () => P.characters, id => { const c = charById(id); return c && c.name; }, '添加角色…')) +
+    '<div class="field"><label>章节归属（派生）</label><div class="meta-list">' +
+      (derived.length ? derived.map(x => '<div class="meta-row"><b>' + esc(x.split('：')[0]) + '</b><span>' + esc(x.split('：')[1]) + '</span></div>').join('') : '<div class="empty-note">没有可见的轴</div>') +
+    '</div><div style="font-size:10.5px;color:var(--text-faint);margin-top:5px">' +
+      '章节归属由逻辑时间与各轴分割线求交实时算出，不单独存储。</div></div>' +
+
+    '<div class="field"><label>选项（分支依据）</label><div class="sub-list">' +
+      ev.choices.map((c, i) => '<div class="sub-row">' +
+        '<input class="inp" data-choice="' + c.id + '" value="' + esc(c.label) + '" placeholder="选项 ' + (i + 1) + ' 文案">' +
+        '<button class="btn sm" data-act="choice-branch:' + c.id + '" title="基于该选项创建后继事件">支</button>' +
+        '<button class="btn sm danger" data-act="choice-del:' + c.id + '">×</button></div>').join('') +
+    '</div><button class="btn sm block" data-act="choice-add" style="margin-top:8px">+ 添加选项</button></div>' +
+
+    '<div class="field"><label>依赖（前驱 / 后继）</label><div class="dep-list">' +
+      (inDeps.length ? inDeps.map(g => depRow(g, 'from', ev.id)).join('') : '<div class="empty-note">没有前驱：这是起点，或尚未连接</div>') +
+      (outDeps.length ? outDeps.map(g => depRow(g, 'to', ev.id)).join('') : '<div class="empty-note">没有后继</div>') +
+    '</div></div>' +
+
+    '<div class="field"><label>引用线</label><div class="dep-list">' +
+      (P.links.filter(g => g.from === ev.id || g.to === ev.id).map(g => {
+        const other = g.from === ev.id ? g.to : g.from;
+        const o = eventById(other);
+        return '<div class="dep-item" data-goto="' + other + '"><span class="dir">' +
+          (g.from === ev.id ? '出' : '入') + '</span><span class="t">' +
+          esc((o && o.title) || '已删除') + ' · ' + esc(LINK_TYPES[g.type].name) + '</span></div>';
+      }).join('') || '<div class="empty-note">没有引用线</div>') +
+    '</div></div>' +
+
+    '<div class="insp-actions">' +
+      '<button class="btn primary" data-act="open-scene">打开剧情细节</button>' +
+      '<button class="btn" data-act="dup-event">复制</button>' +
+      '<button class="btn danger" data-act="del">删除事件</button>' +
+    '</div>';
+
+  wireInspector(ev);
+  $$('[data-choice]', host).forEach(n => n.addEventListener('input', () => {
+    const c = ev.choices.find(x => x.id === n.dataset.choice);
+    if (c) { c.label = n.value; markDirty(); renderCanvas(); }
+  }));
+  $$('[data-goto]', host).forEach(n => n.addEventListener('click', () => {
+    const t = eventById(n.dataset.goto); if (t) { select('event', t.id); centerOn(t); }
+  }));
+}
+function depRow(g, side, selfId) {
+  const otherId = side === 'from' ? g.from : g.to;
+  const o = eventById(otherId);
+  const via = g.viaChoiceId && eventById(g.from) ? (eventById(g.from).choices.find(c => c.id === g.viaChoiceId) || {}).label : '';
+  return '<div class="dep-item" data-goto="' + otherId + '">' +
+    '<span class="dir">' + (side === 'from' ? '入' : '出') + '</span>' +
+    '<span class="t">' + esc((o && o.title) || '已删除') + (via ? ' · 「' + esc(via) + '」' : '') + '</span>' +
+    '<button class="x" data-act="dep-del:' + g.id + '">×</button></div>';
+}
+
+/* ---- 轴 ---- */
+function inspAxis(host, ax) {
+  if (!ax) return;
+  INSP = { kind: 'axis', obj: ax };
+  const b = head(host, ax.name, ax.id + ' · ' + ax.chapters.length + ' 个章节');
+  const r = axisRange(ax);
+  b.innerHTML =
+    field('名称', inp('name', ax.name, '例如：主线 / 主角成长线')) +
+    field('颜色', '<input class="inp" type="color" data-set="color" value="' + esc(normalizeHex(ax.color)) + '" style="height:32px;padding:2px">') +
+    field('轴级设定', ta('brief', ax.brief, '这条时间逻辑在跟踪什么？不记录什么？AI 会优先读它来框定思路。', 6)) +
+    field('可见', selBox('visible', String(ax.visible), { true: '显示', false: '隐藏' }),
+      '隐藏后该轴的色带与分割线不再显示，数据仍保留。') +
+    '<div class="meta-list">' +
+      statsRow('时间范围', fmtNum(r[0]) + '  →  ' + fmtNum(r[1])) +
+      statsRow('章节数', String(ax.chapters.length)) +
+    '</div>' +
+    field('章节', '<div class="dep-list" style="margin-top:4px">' +
+      ax.chapters.map(c => '<div class="dep-item" data-goto-ch="' + ax.id + ':' + c.id + '">' +
+        '<span class="dir">' + fmtNum(c.start) + '</span><span class="t">' + esc(c.title || '未命名') + '</span>' +
+        '<span class="dir">' + fmtNum(c.end) + '</span></div>').join('') +
+      '</div>', '在画布上双击某条轴的空白处即可切分章节。') +
+    '<div class="insp-actions"><button class="btn danger" data-act="del">删除这条轴</button></div>';
+  wireInspector(ax);
+  $$('[data-goto-ch]', host).forEach(n => n.addEventListener('click', () => {
+    const [, cid] = n.dataset.gotoCh.split(':');
+    const ch = findChapter(cid); if (ch) { select('chapter', cid); scrollChapterIntoView(ch.ch); }
+  }));
+}
+
+/* ---- 章节 ---- */
+function inspChapter(host, info) {
+  if (!info) return;
+  const ch = info.ch, ax = info.axis, path = info.path;
+  INSP = { kind: 'chapter', obj: ch };
+  const kids = ch.children || [];
+  const inside = P.events.filter(e => e.t >= ch.start && e.t < ch.end).sort((a, b) => a.t - b.t);
+  const b = head(host, ch.title || '未命名章节', ax.name + ' · ' + fmtNum(ch.start) + ' → ' + fmtNum(ch.end));
+
+  b.innerHTML =
+    field('章节标题', inp('title', ch.title, '章节名')) +
+    field('章节设定', ta('brief', ch.brief, '这一章的基调、目标、要交代的事。AI 生成时会读它。', 5)) +
+    '<div class="two">' +
+      field('起始', '<input class="inp" type="number" value="' + ch.start + '" data-bd="start">',
+        path.length === 1 && ax.chapters[0].id !== ch.id ? '由前一个章节决定' : '') +
+      field('结束', '<input class="inp" type="number" value="' + ch.end + '" data-bd="end">',
+        path.length === 1 && ax.chapters[ax.chapters.length - 1].id !== ch.id ? '由后一个章节决定' : '') +
+    '</div>' +
+    '<div class="meta-list">' +
+      statsRow('层级', path.length === 1 ? '章节' : '子章节') +
+      statsRow('所属轴', ax.name) +
+      statsRow('区间内事件', inside.length + ' 个') +
+    '</div>' +
+    '<div class="field" style="margin-top:10px"><label>区间内的事件</label><div class="dep-list">' +
+      (inside.length ? inside.map(e => '<div class="dep-item" data-goto="' + e.id + '">' +
+        '<span class="dir">' + Math.round(e.t) + '</span><span class="t">' + esc(e.title) + '</span></div>').join('')
+        : '<div class="empty-note">这一章还没有事件</div>') +
+    '</div></div>' +
+    (path.length === 1 ? '<div class="field"><label>子章节</label><div class="dep-list">' +
+      (kids.length ? kids.map(k => '<div class="dep-item" data-goto-ch="' + ax.id + ':' + k.id + '">' +
+        '<span class="dir">' + fmtNum(k.start) + '</span><span class="t">' + esc(k.title || '未命名') + '</span>' +
+        '<span class="dir">' + fmtNum(k.end) + '</span></div>').join('')
+        : '<div class="empty-note">没有子章节。双击子章节分割线可再切一刀。</div>') +
+      '</div></div>' : '') +
+    '<div class="insp-actions">' +
+      '<button class="btn" data-act="chapter-split">在此章节中点切一刀</button>' +
+      '<button class="btn danger" data-act="del">删除章节</button>' +
+    '</div>';
+
+  wireInspector(ch);
+  $$('[data-bd]', host).forEach(n => n.addEventListener('change', () => {
+    setBoundary(ax, ch.id, n.dataset.bd, Number(n.value));
+    renderInspector(); renderCanvas(); renderLeft(); markDirty();
+  }));
+  $$('[data-goto]', host).forEach(n => n.addEventListener('click', () => {
+    const t = eventById(n.dataset.goto); if (t) { select('event', t.id); centerOn(t); }
+  }));
+  $$('[data-goto-ch]', host).forEach(n => n.addEventListener('click', () => {
+    const cid = n.dataset.gotoCh.split(':')[1];
+    const c2 = findChapter(cid); if (c2) { select('chapter', cid); scrollChapterIntoView(c2.ch); }
+  }));
+}
+
+function setBoundary(ax, chapterId, side, value) {
+  let list = null, idx = -1, isSub = false, parent = null;
+  for (const c of ax.chapters) {
+    if (c.id === chapterId) { list = ax.chapters; idx = ax.chapters.indexOf(c); break; }
+    const k = (c.children || []).findIndex(x => x.id === chapterId);
+    if (k >= 0) { list = c.children; idx = k; isSub = true; parent = c; break; }
+  }
+  if (!list || idx < 0) return;
+  const cur = list[idx];
+  if (side === 'start') {
+    if (idx === 0) {
+      if (isSub) { cur.start = parent.start; }
+      else cur.start = Math.min(value, cur.end - MINW);
+    } else {
+      const prev = list[idx - 1];
+      const v = clamp(value, prev.start + MINW, cur.end - MINW);
+      prev.end = v; cur.start = v;
+    }
+  } else {
+    if (idx === list.length - 1) {
+      if (isSub) { cur.end = parent.end; }
+      else cur.end = Math.max(value, cur.start + MINW);
+    } else {
+      const nxt = list[idx + 1];
+      const v = clamp(value, cur.start + MINW, nxt.end - MINW);
+      cur.end = v; nxt.start = v;
+    }
+  }
+  if (isSub) clampChildren(parent);
+  for (const c of ax.chapters) clampChildren(c);
+}
+function normalizeHex(c) { return /^#[0-9a-fA-F]{6}$/.test(c || '') ? c : '#4a9eff'; }
+
+/* ---- 角色 / 地点 ---- */
+function inspCharacter(host, c) {
+  if (!c) return;
+  INSP = { kind: 'character', obj: c };
+  const evs = P.events.filter(e => e.characterIds.includes(c.id)).sort((a, b) => a.t - b.t);
+  const b = head(host, c.name, c.id + ' · 出现在 ' + evs.length + ' 个事件');
+  b.innerHTML =
+    field('姓名', inp('name', c.name, '角色名')) +
+    '<div class="two">' +
+      field('颜色', '<input class="inp" type="color" data-set="color" value="' + esc(normalizeHex(c.color || '#f06060')) + '" style="height:32px;padding:2px">') +
+      field('别名', inp('aliases', (c.aliases || []).join(', '), '逗号分隔')) +
+    '</div>' +
+    field('角色设定', ta('brief', c.brief, '身份、性格、目标、说话方式、秘密。AI 生成时会读它。', 8)) +
+    field('标签', inp('tags', (c.tags || []).join(', '), '逗号分隔')) +
+    '<div class="field"><label>出场事件</label><div class="dep-list">' +
+      (evs.length ? evs.map(e => '<div class="dep-item" data-goto="' + e.id + '">' +
+        '<span class="dir">' + Math.round(e.t) + '</span><span class="t">' + esc(e.title) + '</span></div>').join('')
+        : '<div class="empty-note">还没有事件引用这个角色</div>') +
+    '</div><button class="btn sm block" data-act="focus-char" style="margin-top:8px">在角色视图中聚焦</button></div>' +
+    '<div class="insp-actions"><button class="btn danger" data-act="del">删除角色</button></div>';
+  wireInspector(c);
+  $$('[data-goto]', host).forEach(n => n.addEventListener('click', () => {
+    const t = eventById(n.dataset.goto); if (t) { select('event', t.id); centerOn(t); }
+  }));
+}
+function inspPlace(host, p) {
+  if (!p) return;
+  INSP = { kind: 'place', obj: p };
+  const evs = P.events.filter(e => e.placeIds.includes(p.id)).sort((a, b) => a.t - b.t);
+  const b = head(host, p.name, p.id + ' · 出现在 ' + evs.length + ' 个事件');
+  const parentOpts = { '': '（无上级）' };
+  P.places.forEach(x => { if (x.id !== p.id) parentOpts[x.id] = x.name; });
+  b.innerHTML =
+    field('名称', inp('name', p.name, '地点名')) +
+    '<div class="two">' +
+      field('颜色', '<input class="inp" type="color" data-set="color" value="' + esc(normalizeHex(p.color || '#b07cff')) + '" style="height:32px;padding:2px">') +
+      field('上级地点', selBox('parentId', p.parentId || '', parentOpts)) +
+    '</div>' +
+    field('地点设定', ta('brief', p.brief, '环境、气氛、势力、在这里发生过什么。AI 生成时会读它。', 8)) +
+    field('标签', inp('tags', (p.tags || []).join(', '), '逗号分隔')) +
+    '<div class="field"><label>在此发生的事件</label><div class="dep-list">' +
+      (evs.length ? evs.map(e => '<div class="dep-item" data-goto="' + e.id + '">' +
+        '<span class="dir">' + Math.round(e.t) + '</span><span class="t">' + esc(e.title) + '</span></div>').join('')
+        : '<div class="empty-note">还没有事件引用这个地点</div>') +
+    '</div><button class="btn sm block" data-act="focus-place" style="margin-top:8px">在地点视图中聚焦</button></div>' +
+    '<div class="insp-actions"><button class="btn danger" data-act="del">删除地点</button></div>';
+  wireInspector(p);
+  $$('[data-goto]', host).forEach(n => n.addEventListener('click', () => {
+    const t = eventById(n.dataset.goto); if (t) { select('event', t.id); centerOn(t); }
+  }));
+}
+
+/* ---- 世界观 ---- */
+function inspWorld(host) {
+  INSP = { kind: 'world', obj: P.world };
+  const b = head(host, '世界观', '全局设定，AI 的最高优先级上下文');
+  b.innerHTML =
+    field('总体设定', ta('world.brief', P.world.brief, '时代、地理、势力、规则、基调、关键词……', 14)) +
+    '<div class="field"><label>分节</label><div class="sub-list">' +
+      P.world.sections.map(s => '<div class="sub-row" data-sec="' + s.id + '">' +
+        '<input class="inp" data-sec-title="' + s.id + '" value="' + esc(s.title) + '" placeholder="小节标题" style="flex:0 0 34%">' +
+        '<textarea class="ta" data-sec-text="' + s.id + '" rows="3" placeholder="内容" style="min-height:38px">' + esc(s.text) + '</textarea>' +
+        '<button class="btn sm danger" data-act="sec-del:' + s.id + '">×</button></div>').join('') +
+    '</div><button class="btn sm block" data-act="sec-add" style="margin-top:8px">+ 添加小节</button></div>';
+  wireInspector(null);
+  $$('[data-sec-title]', host).forEach(n => n.addEventListener('input', () => {
+    const s = P.world.sections.find(x => x.id === n.dataset.secTitle); if (s) { s.title = n.value; markDirty(); renderLeft(); }
+  }));
+  $$('[data-sec-text]', host).forEach(n => n.addEventListener('input', () => {
+    const s = P.world.sections.find(x => x.id === n.dataset.secText); if (s) { s.text = n.value; markDirty(); }
+  }));
+  const ta1 = $('[data-set="world.brief"]', host);
+  if (ta1) ta1.addEventListener('input', () => { P.world.brief = ta1.value; markDirty(); renderLeft(); });
+}
+
+/* ---- 连线 ---- */
+function inspEdge(host, g) {
+  if (!g) return;
+  INSP = { kind: 'edge', obj: g };
+  const a = eventById(g.from), z = eventById(g.to);
+  const src = a ? a.choices : [];
+  const choiceOpts = { '': '（无条件，只要完成即解锁）' };
+  src.forEach(c => choiceOpts[c.id] = c.label || '(未命名选项)');
+  const b = head(host, '依赖', (a ? a.title : '?') + '  →  ' + (z ? z.title : '?'));
+  b.innerHTML =
+    '<div class="meta-list">' +
+      statsRow('源事件', (a && a.title) || '已删除') +
+      statsRow('目标事件', (z && z.title) || '已删除') +
+      statsRow('含义', '源事件完成且满足全部门槛后，目标解锁') +
+    '</div>' +
+    field('触发选项', selBox('viaChoiceId', g.viaChoiceId || '', choiceOpts),
+      '选一个选项即成为分支：只有玩家在源事件里选了它，这条依赖才成立。') +
+    '<div class="field"><label>额外门槛</label>' +
+      (g.requirements.length
+        ? '<div class="sub-list">' + g.requirements.map(r =>
+            '<div class="req-row">' +
+              '<select class="sel" data-reqtype="' + r.id + '">' +
+                Object.keys(REQ_TYPES).map(k =>
+                  '<option value="' + k + '"' + (k === r.type ? ' selected' : '') + '>' + REQ_TYPES[k].name + '</option>').join('') +
+              '</select>' +
+              '<input class="inp" data-reqkey="' + r.id + '" value="' + esc(r.key) + '" placeholder="条件">' +
+              '<input class="inp" data-reqval="' + r.id + '" value="' + esc(r.value) + '" placeholder="值（可空）">' +
+              '<button class="btn sm danger" data-reqdel="' + r.id + '" title="删除">×</button>' +
+            '</div>').join('') + '</div>'
+        : '<div class="empty-note">没有额外门槛。这里放"除了完成源事件之外还需要的条件"。</div>') +
+      '<button class="btn sm block" data-reqadd="1" style="margin-top:8px">+ 添加门槛</button>' +
+      '<div style="font-size:10.5px;color:var(--text-faint);margin-top:6px">门槛是给人和 AI 看的约束说明，不会自动推导。</div>' +
+    '</div>' +
+    field('备注', inp('note', g.note, '例如：需要先拿到钥匙')) +
+    '<div class="insp-actions">' +
+      '<button class="btn" data-act="goto:' + g.from + '">跳到源事件</button>' +
+      '<button class="btn" data-act="goto:' + g.to + '">跳到目标</button>' +
+      '<button class="btn danger" data-act="del">删除依赖</button>' +
+    '</div>';
+  wireInspector(g);
+  $$('[data-reqdel]', host).forEach(n => n.addEventListener('click', () => {
+    pushUndo();
+    g.requirements = g.requirements.filter(r => r.id !== n.dataset.reqdel);
+    commit();
+  }));
+  const addReq = $('[data-reqadd]', host);
+  if (addReq) addReq.addEventListener('click', () => {
+    pushUndo();
+    g.requirements.push({ id: uid('rq'), type: 'flag', key: '', value: '', note: '' });
+    commit();
+  });
+  const bindReq = (attr, key) => $$('[data-' + attr + ']', host).forEach(n => {
+    const handler = () => {
+      const r = g.requirements.find(x => x.id === n.dataset[attr]);
+      if (!r) return;
+      r[key] = n.value;
+      markDirty();
+      if (key === 'type') renderInspector();
+      renderCanvas();
+    };
+    if (n.tagName === 'SELECT') n.addEventListener('change', handler);
+    else n.addEventListener('input', handler);
+  });
+  bindReq('reqtype', 'type');
+  bindReq('reqkey', 'key');
+  bindReq('reqval', 'value');
+}
+function inspLink(host, g) {
+  if (!g) return;
+  INSP = { kind: 'link', obj: g };
+  const a = eventById(g.from), z = eventById(g.to);
+  const b = head(host, '引用线', (a ? a.title : '?') + '  →  ' + (z ? z.title : '?'));
+  const types = {};
+  for (const k in LINK_TYPES) types[k] = LINK_TYPES[k].name;
+  b.innerHTML =
+    '<div class="hint-box">引用线不构成解锁条件，只用来记录"做过某事件会让此事件走向不同"这类叙事关联，便于跳转与提醒。</div>' +
+    '<div style="height:10px"></div>' +
+    field('类型', selBox('type', g.type, types), LINK_TYPES[g.type].desc) +
+    (g.type === 'foreshadow'
+      ? field('回收状态', selBox('state', g.state || 'open', { open: '已埋设，尚未回收', closed: '已回收' }),
+          '未回收的伏笔会在画布上高亮，并计入左栏的「悬空伏笔」。')
+      : '') +
+    field('标注', inp('label', g.label, '画在连线上的短文字')) +
+    field('备注', ta('note', g.note, '具体是什么关联；伏笔可以写清打算在哪里回收', 4)) +
+    '<div class="insp-actions">' +
+      '<button class="btn" data-act="goto:' + g.from + '">跳到源事件</button>' +
+      '<button class="btn" data-act="goto:' + g.to + '">跳到目标</button>' +
+      '<button class="btn danger" data-act="del">删除引用线</button>' +
+    '</div>';
+  wireInspector(g);
+}
+
+/* ---- 动作分发 ---- */
+function doAct(act, scope, node) {
+  if (act === 'del') { deleteSelection(); return; }
+  if (act === 'open-scene') { openSceneEditor(scope.id); return; }
+  if (act === 'dup-event') {
+    pushUndo();
+    const c = clone(scope); c.id = uid('ev'); c.title = scope.title + ' 副本';
+    c.t = scope.t + 40; c.y = scope.y + 40; c.choices = c.choices.map(x => ({ id: uid('op'), label: x.label, note: x.note }));
+    c.scene.steps = c.scene.steps.map(s => Object.assign({}, s, { id: uid('st') }));
+    P.events.push(c); markDirty(); select('event', c.id); return;
+  }
+  if (act === 'choice-add') {
+    pushUndo(); scope.choices.push({ id: uid('op'), label: '选项 ' + (scope.choices.length + 1), note: '' });
+    commit(); return;
+  }
+  if (act.indexOf('choice-del:') === 0) {
+    const id = act.split(':')[1];
+    pushUndo();
+    scope.choices = scope.choices.filter(c => c.id !== id);
+    P.edges.forEach(g => { if (g.viaChoiceId === id) g.viaChoiceId = ''; });
+    commit(); return;
+  }
+  if (act.indexOf('choice-branch:') === 0) {
+    const id = act.split(':')[1];
+    const c = scope.choices.find(x => x.id === id);
+    pushUndo();
+    const ev = newEvent(scope.t + 260, scope.y + (scope.choices.indexOf(c) - (scope.choices.length - 1) / 2) * 150);
+    ev.title = (c && c.label) || '分支事件';
+    ev.kind = scope.kind;
+    ev.characterIds = scope.characterIds.slice();
+    ev.placeIds = scope.placeIds.slice();
+    P.events.push(ev);
+    P.edges.push({ id: uid('ed'), from: scope.id, to: ev.id, viaChoiceId: id, requirements: [], note: '' });
+    markDirty(); select('event', ev.id); toast('已创建分支事件并连好依赖', 'ok'); return;
+  }
+  if (act.indexOf('dep-del:') === 0) {
+    const id = act.split(':')[1];
+    pushUndo(); P.edges = P.edges.filter(g => g.id !== id); commit(); return;
+  }
+  if (act.indexOf('goto:') === 0) {
+    const t = eventById(act.split(':')[1]); if (t) { select('event', t.id); centerOn(t); } return;
+  }
+  if (act === 'chapter-split') {
+    const info = findChapter(S.selection.id);
+    if (info) splitAt(info.axis.id, info.path.length === 2 ? info.path[0].id : '', (info.ch.start + info.ch.end) / 2);
+    return;
+  }
+  if (act === 'focus-char') { setView('character'); S.focusId = scope.id; select('character', scope.id); fitView(); return; }
+  if (act === 'focus-place') { setView('place'); S.focusId = scope.id; select('place', scope.id); fitView(); return; }
+  if (act === 'sec-add') {
+    pushUndo(); P.world.sections.push({ id: uid('sec'), title: '新小节', text: '' });
+    commit(); renderInspector(); return;
+  }
+  if (act.indexOf('sec-del:') === 0) {
+    const id = act.split(':')[1];
+    pushUndo(); P.world.sections = P.world.sections.filter(s => s.id !== id); commit(); renderInspector(); return;
+  }
+}
+/* 拖拽中只刷新坐标字段，避免整块重建 */
+function renderInspectorLight() {
+  const s = S.selection;
+  if (!s || s.type !== 'event') return;
+  const ev = eventById(s.id); if (!ev) return;
+  const a = $('#inspector [data-set="t"]'), b = $('#inspector [data-set="y"]');
+  if (a && document.activeElement !== a) a.value = Math.round(ev.t);
+  if (b && document.activeElement !== b) b.value = Math.round(ev.y);
+}
+
+/* ============================================================================
+   15 · 模态框架
+   ========================================================================== */
+function showModal(html) { const m = $('#mask'); m.innerHTML = html; m.classList.remove('hide'); }
+function closeMask() { const m = $('#mask'); m.classList.add('hide'); m.innerHTML = ''; }
+onDown($('#mask'), e => { if (e.target.id === 'mask') closeMask(); });
+
+/* ============================================================================
+   16 · 剧情细节编辑器
+   ========================================================================== */
+let sceneCtx = { evId: '', dragFrom: -1 };
+
+function openSceneEditor(evId) {
+  const ev = eventById(evId);
+  if (!ev) return;
+  sceneCtx.evId = evId;
+  renderSceneEditor();
+}
+function renderSceneEditor() {
+  const ev = eventById(sceneCtx.evId);
+  if (!ev) { closeMask(); return; }
+  const steps = ev.scene.steps;
+  const typeOpts = STEP_ORDER.map(k => '<option value="' + k + '">' + STEP_TYPES[k].name + '</option>').join('');
+
+  const rows = steps.map((s, i) => {
+    const def = STEP_TYPES[s.type];
+    const fields = (STEP_FIELDS[s.type] || []).map(([key, label, kind]) => {
+      const val = s.fields[key] || '';
+      const one = (STEP_FIELDS[s.type] || []).length === 1;
+      return '<div><span class="mini-label">' + esc(label) + '</span>' +
+        (kind === 'area'
+          ? '<textarea class="ta" rows="2" data-step-field="' + key + '" data-step-id="' + s.id + '" style="min-height:44px">' + esc(val) + '</textarea>'
+          : '<input class="inp" data-step-field="' + key + '" data-step-id="' + s.id + '" value="' + esc(val) + '">') +
+        '</div>';
+    }).join('');
+    const oneCol = (STEP_FIELDS[s.type] || []).length === 1;
+    return '<div class="step" draggable="true" data-idx="' + i + '">' +
+      '<div class="s-grip" title="拖动排序">⋮⋮</div>' +
+      '<div class="s-body">' +
+        '<div class="s-top">' +
+          '<span class="s-num">' + (i + 1) + '</span>' +
+          '<select class="s-type ' + def.color + '" data-step-type="' + s.id + '">' +
+            typeOpts.replace('value="' + s.type + '"', 'value="' + s.type + '" selected') + '</select>' +
+          '<div class="tb-spacer" style="flex:1"></div>' +
+          '<button class="btn sm" data-step-up="' + i + '" title="上移">↑</button>' +
+          '<button class="btn sm" data-step-down="' + i + '" title="下移">↓</button>' +
+          '<button class="s-del" data-step-del="' + s.id + '" title="删除这一步">×</button>' +
+        '</div>' +
+        '<div class="s-fields' + (oneCol ? ' one' : '') + '">' + fields + '</div>' +
+      '</div></div>';
+  }).join('');
+
+  showModal(
+    '<div class="modal wide">' +
+      '<div class="m-head">' +
+        '<div class="m-title">' + esc(ev.title) + ' · 剧情细节</div>' +
+        '<div class="m-sub">' + steps.length + ' 步</div>' +
+        '<button class="m-close" data-close="1">×</button>' +
+      '</div>' +
+      '<div class="m-body">' +
+        '<div class="hint-box" style="margin-bottom:14px">这里定义事件的内部经过：对白、旁白、战斗、探索、检定、移动、结算。' +
+        '步骤按顺序排列，AI 生成时会读到它们，用来理解这个事件"具体怎么演"。</div>' +
+        '<div class="steps" id="stepList">' + (rows || '<div class="empty-note">还没有步骤。用下面的按钮添加第一步。</div>') + '</div>' +
+        '<div class="add-step-row">' +
+          STEP_ORDER.map(k => '<button data-add-step="' + k + '">+ ' + STEP_TYPES[k].name + '</button>').join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="m-foot">' +
+        '<button class="btn primary" data-close="1">完成</button>' +
+        '<div class="sp"></div>' +
+        '<button class="btn danger" data-act-clear="1">清空全部步骤</button>' +
+      '</div>' +
+    '</div>');
+
+  const m = $('#mask');
+  $$('[data-close]', m).forEach(n => n.addEventListener('click', closeMask));
+  $$('[data-add-step]', m).forEach(n => n.addEventListener('click', () => {
+    pushUndo();
+    ev.scene.steps.push({ id: uid('st'), type: n.dataset.addStep, fields: {}, children: [] });
+    markDirty(); renderSceneEditor(); renderCanvas();
+  }));
+  $$('[data-step-type]', m).forEach(n => n.addEventListener('change', () => {
+    const s = ev.scene.steps.find(x => x.id === n.dataset.stepType);
+    if (s) { pushUndo(); s.type = n.value; markDirty(); renderSceneEditor(); }
+  }));
+  $$('[data-step-del]', m).forEach(n => n.addEventListener('click', () => {
+    pushUndo();
+    ev.scene.steps = ev.scene.steps.filter(x => x.id !== n.dataset.stepDel);
+    markDirty(); renderSceneEditor(); renderCanvas();
+  }));
+  $$('[data-step-up]', m).forEach(n => n.addEventListener('click', () => {
+    const i = Number(n.dataset.stepUp);
+    if (i <= 0) return;
+    pushUndo();
+    const a = ev.scene.steps; a.splice(i - 1, 0, a.splice(i, 1)[0]);
+    markDirty(); renderSceneEditor();
+  }));
+  $$('[data-step-down]', m).forEach(n => n.addEventListener('click', () => {
+    const i = Number(n.dataset.stepDown);
+    if (i >= ev.scene.steps.length - 1) return;
+    pushUndo();
+    const a = ev.scene.steps; a.splice(i + 1, 0, a.splice(i, 1)[0]);
+    markDirty(); renderSceneEditor();
+  }));
+  $$('[data-step-field]', m).forEach(n => n.addEventListener('input', () => {
+    const s = ev.scene.steps.find(x => x.id === n.dataset.stepId);
+    if (s) { s.fields[n.dataset.stepField] = n.value; markDirty(); }
+  }));
+  const clearBtn = $('[data-act-clear]', m);
+  if (clearBtn) clearBtn.addEventListener('click', () => {
+    if (!confirmBox('确定清空这个事件的全部剧情步骤？')) return;
+    pushUndo(); ev.scene.steps = []; markDirty(); renderSceneEditor(); renderCanvas();
+  });
+
+  // 拖动排序
+  let dragIdx = -1;
+  $$('#stepList .step', m).forEach(node => {
+    node.addEventListener('dragstart', () => { dragIdx = Number(node.dataset.idx); node.classList.add('dragging'); });
+    node.addEventListener('dragend', () => { node.classList.remove('dragging'); });
+    node.addEventListener('dragover', e => e.preventDefault());
+    node.addEventListener('drop', e => {
+      e.preventDefault();
+      const to = Number(node.dataset.idx);
+      if (dragIdx < 0 || dragIdx === to) return;
+      pushUndo();
+      const arr = ev.scene.steps;
+      arr.splice(to, 0, arr.splice(dragIdx, 1)[0]);
+      dragIdx = -1;
+      markDirty(); renderSceneEditor();
+    });
+  });
+}
+
+/* ============================================================================
+   17 · 其他模态
+   ========================================================================== */
+function openHelp() {
+  showModal(
+    '<div class="modal">' +
+      '<div class="m-head"><div class="m-title">使用说明</div><button class="m-close" data-close="1">×</button></div>' +
+      '<div class="m-body">' +
+        '<div class="ai-sec-title">核心概念</div>' +
+        '<div class="hint-box">' +
+          '<b>轴</b>：一条独立的时间逻辑（主线轴、某角色成长轴、某事件自己的轴）。轴是铺满画面高度的半透明色带，' +
+          '各自拥有分割线与设定文本，可分别开关。不同轴互不约束，因此色带会重叠——这正是"同一批事件被不同分章方式框定"的效果。<br><br>' +
+          '<b>章节</b>：由分割线切出的区间。同一条轴上的章节首尾相接、不留空隙。<b>拖动分割线</b>调整边界，<b>双击分割线</b>在两侧之外再切一刀。<br><br>' +
+          '<b>事件</b>：画布上的节点，携带逻辑时间 t 与自由的纵向 y。它不属于任何轴，因此同时出现在所有轴上；' +
+          '"属于哪一章"由 t 与各轴分割线求交实时算出，不单独存储。<br><br>' +
+          '<b>依赖</b>：实线箭头，表示"源事件完成且满足全部门槛后，目标解锁"。<br>' +
+          '<b>分支</b>：在右侧为依赖指定触发选项，即成为"只有选了某个选项才成立"的分支。<br>' +
+          '<b>额外门槛</b>：依赖上可以再加条件（标记 / 物品 / 属性 / 自定义）。门槛是给人看和给 AI 读的约束说明，不会自动推导，画布上会显示为 ⛓ 标注。<br><br>' +
+          '<b>引用线</b>：紫色虚线，非强依赖的叙事关联（做过某事件会让此事件走向不同）。只作跳转与提示，不构成解锁条件。<br>' +
+          '<b>伏笔</b>：引用线的一种。带<em>回收状态</em>，未回收的会显示成暖色密虚线、在事件卡片左上角挂「伏」标记、并计入左栏的<em>悬空伏笔</em>列表；在右侧把状态改成「已回收」即消失。' +
+        '</div>' +
+        '<div class="ai-sec-title">操作</div>' +
+        '<div class="hint-box">' +
+          '<span class="kbd">双击空白</span> 新建事件 &nbsp; <span class="kbd">双击事件</span> 打开剧情细节 &nbsp; <span class="kbd">双击分割线</span> 在此切一刀<br>' +
+          '<span class="kbd">拖拽空白</span> 平移 &nbsp; <span class="kbd">滚轮</span> 缩放 &nbsp; <span class="kbd">Shift+滚轮</span> 横向平移<br>' +
+          '<span class="kbd">拖节点右圆点</span> 连出依赖 &nbsp; <span class="kbd">Alt+拖</span> 连出引用线 &nbsp; <span class="kbd">Ctrl+拖节点</span> 锁定单轴移动<br>' +
+          '<span class="kbd">Shift+点击</span> 加选 &nbsp; <span class="kbd">Shift+拖空白</span> 框选 &nbsp; <span class="kbd">Ctrl+A</span> 全选 &nbsp; <span class="kbd">Esc</span> 取消选择<br>' +
+          '<span class="kbd">方向键</span> 微调位置（<span class="kbd">Shift</span> 加速 10 倍） &nbsp; <span class="kbd">Delete</span> 删除选中 &nbsp; <span class="kbd">F</span> 适应视图<br>' +
+          '<span class="kbd">Ctrl+Z</span> 撤销 &nbsp; <span class="kbd">Ctrl+Shift+Z</span> 重做 &nbsp; <span class="kbd">Ctrl+S</span> 立即保存<br>' +
+          '事件多了以后用左栏的<em>搜索框</em>过滤，命中的节点会保持明亮、其余淡出。' +
+        '</div>' +
+        '<div class="ai-sec-title">与外部 AI / Agent 协作</div>' +
+        '<div class="hint-box">' +
+          '工程文件是唯一数据源。用任何编辑器或 AI 直接改这个 JSON 并保存，页面会在 1 秒内自动刷新出新内容——' +
+          '不需要点任何按钮。反过来，页面上的任何改动也会自动写回同一个文件。<br><br>' +
+          '在「会话与模型」里把模式切成<em>接入外部 Agent 会话</em>，这个页面的对话框就等同于与 agent 的会话进程对话：' +
+          '你说的话会投递给 agent，它的回复、改动提案与界面指令都会实时回到这里。协议见工具目录下的 AGENT-BRIDGE.md。' +
+        '</div>' +
+      '</div>' +
+      '<div class="m-foot"><button class="btn primary" data-close="1">知道了</button></div>' +
+    '</div>');
+  $$('#mask [data-close]').forEach(n => n.addEventListener('click', closeMask));
+}
+
+async function openProjects() {
+  if (IO.mode !== 'server') {
+    toast('未连接本地服务，无法列出工程。可用「导出 / 导入」管理 JSON。', 'warn', 4200);
+    return;
+  }
+  let list = { projects: [] };
+  try { list = await (await fetch('/api/list')).json(); } catch (e) {}
+  const rows = (list.projects || []).map(p =>
+    '<div class="dep-item" data-open="' + esc(p.file) + '">' +
+      '<span class="t">' + esc(p.file.replace(/\.json$/i, '')) + '</span>' +
+      '<span class="dir">' + Math.round(p.size / 1024) + ' KB</span>' +
+      '<button class="x" data-delproj="' + esc(p.file) + '" title="删除工程文件">×</button></div>').join('');
+  showModal(
+    '<div class="modal narrow">' +
+      '<div class="m-head"><div class="m-title">工程</div><div class="m-sub">' + (list.projects || []).length + ' 个</div>' +
+      '<button class="m-close" data-close="1">×</button></div>' +
+      '<div class="m-body">' +
+        '<div class="dep-list">' + (rows || '<div class="empty-note">还没有工程文件</div>') + '</div>' +
+        '<div class="field" style="margin-top:14px"><label>新建工程</label>' +
+          '<div class="sub-row"><input class="inp" id="newProjName" placeholder="例如：第一章 大纲">' +
+          '<button class="btn primary" data-newproj="1">创建</button></div></div>' +
+        '<div class="hint-box" style="margin-top:8px">工程文件存放在工具目录的 <b>工程/</b> 文件夹里，每个工程一个 JSON。' +
+        '可以直接让外部 AI 编辑这些文件。</div>' +
+      '</div>' +
+      '<div class="m-foot"><button class="btn" data-close="1">关闭</button></div>' +
+    '</div>');
+  const m = $('#mask');
+  $$('[data-close]', m).forEach(n => n.addEventListener('click', closeMask));
+  $$('[data-open]', m).forEach(n => n.addEventListener('click', async e => {
+    if (e.target.dataset.delproj) return;
+    try { await loadFromServer(n.dataset.open); localStorage.setItem('plotstudio.lastFile', n.dataset.open); closeMask(); toast('已打开 ' + n.dataset.open, 'ok'); }
+    catch (err) { toast('打开失败：' + err.message, 'err'); }
+  }));
+  $$('[data-delproj]', m).forEach(n => n.addEventListener('click', async e => {
+    e.stopPropagation();
+    const f = n.dataset.delproj;
+    if (!confirmBox('确定删除工程文件 ' + f + '？此操作不可撤销。')) return;
+    await fetch('/api/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: f }) });
+    toast('已删除 ' + f); closeMask();
+  }));
+  const nw = $('[data-newproj]', m);
+  if (nw) nw.addEventListener('click', async () => {
+    const name = ($('#newProjName').value || '').trim();
+    if (!name) { toast('请填写工程名', 'warn'); return; }
+    const file = name.replace(/[\\/:*?"<>|]/g, '_') + '.json';
+    P = newProject(name); IO.file = file;
+    await saveToServer();
+    localStorage.setItem('plotstudio.lastFile', file);
+    afterLoad(); watchFile(); closeMask();
+    toast('已创建并打开 ' + file, 'ok');
+  });
+}
+
+function openAiConfig() {
+  const agentMode = S.session.mode === 'agent';
+  showModal(
+    '<div class="modal">' +
+      '<div class="m-head"><div class="m-title">会话与模型</div><button class="m-close" data-close="1">×</button></div>' +
+      '<div class="m-body">' +
+
+        '<div class="field"><label>对话由谁响应</label>' +
+          '<select class="sel" id="cfgMode">' +
+            '<option value="direct"' + (!agentMode ? ' selected' : '') + '>页面直连模型（自己填 API Key）</option>' +
+            '<option value="agent"' + (agentMode ? ' selected' : '') + '>接入外部 Agent 会话（由加载本页的 agent 响应）</option>' +
+          '</select>' +
+          '<div style="font-size:10.5px;color:var(--text-faint);margin-top:6px;line-height:1.7">' +
+          '选「接入 Agent 会话」后，这个页面里的对话框等同于与 agent 的会话进程对话：你说的话会投递给 agent，' +
+          'agent 的回复、改动提案、界面指令（选中 / 定位 / 切换视图 / 打开剧情）会实时回推到页面。' +
+          '此时页面不再需要 API Key，模型能力由 agent 自身提供。</div></div>' +
+
+        '<div id="directBox" style="' + (agentMode ? 'display:none' : '') + '">' +
+          '<div class="hint-box">支持任何 OpenAI 兼容接口。' +
+          (IO.mode === 'server'
+            ? '请求会经由本地服务转发，因此不受浏览器 CORS 限制，Key 保存在工具目录的 <b>config.json</b> 里，不进浏览器存储。'
+            : '当前是受限模式：请求由浏览器直连，可能被目标服务的 CORS 拦截，且 Key 只存在于本次会话。') +
+          '</div><div style="height:12px"></div>' +
+          '<div class="field"><label>接口地址 baseURL</label>' +
+            '<input class="inp" id="cfgBase" placeholder="https://api.deepseek.com/v1" value="' + esc(AICFG.baseURL || '') + '"></div>' +
+          '<div class="field"><label>模型名</label>' +
+            '<input class="inp" id="cfgModel" placeholder="deepseek-chat" value="' + esc(AICFG.model || '') + '"></div>' +
+          '<div class="field"><label>API Key</label>' +
+            '<input class="inp" id="cfgKey" type="password" placeholder="' + (AICFG.hasKey ? '已配置（尾号 ' + esc(AICFG.keyTail || '') + '），留空则不修改' : 'sk-...') + '"></div>' +
+        '</div>' +
+
+        '<div id="agentBox" style="' + (agentMode ? '' : 'display:none') + '">' +
+          '<div class="hint-box">' +
+          '<b>当前状态：</b>' + (S.session.connected ? '已连接本地服务，等待 agent 应答' : '未连接本地服务') + '<br>' +
+          '会话通道：<b>/api/session/</b>（收件箱、回复、指令、状态上报）<br>' +
+          'agent 侧可用 <b>python agent.py poll --wait 60</b> 等待你的消息，' +
+          '用 <b>say</b> / <b>patch</b> / <b>cmd</b> 回话与操作界面。完整协议见工具目录下的 AGENT-BRIDGE.md。' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="field" style="margin-top:14px"><label>改动如何落盘</label>' +
+          '<select class="sel" id="cfgAuto">' +
+            '<option value="text"' + (S.ai.autoMode === 'text' ? ' selected' : '') + '>仅文本类改动自动写入，结构类需确认（推荐）</option>' +
+            '<option value="none"' + (S.ai.autoMode === 'none' ? ' selected' : '') + '>全部改动都需要我确认</option>' +
+            '<option value="all"' + (S.ai.autoMode === 'all' ? ' selected' : '') + '>全部自动写入（结构改动也直接落盘）</option>' +
+          '</select>' +
+          '<div style="font-size:10.5px;color:var(--text-faint);margin-top:5px">这条对直连模型与外部 agent 同样生效。' +
+          '无论哪种模式，改动前都会自动快照，且可从对话里一键撤销。</div></div>' +
+      '</div>' +
+      '<div class="m-foot">' +
+        '<button class="btn" data-test="1" style="' + (agentMode ? 'display:none' : '') + '">测试连接</button>' +
+        '<div class="sp"></div>' +
+        '<button class="btn" data-close="1">取消</button>' +
+        '<button class="btn primary" data-save="1">保存</button>' +
+      '</div>' +
+    '</div>');
+  const m = $('#mask');
+  $$('[data-close]', m).forEach(n => n.addEventListener('click', closeMask));
+  $('#cfgMode', m).addEventListener('change', () => {
+    const mode = $('#cfgMode').value;
+    const agent = mode === 'agent';
+    $('#directBox').style.display = agent ? 'none' : '';
+    $('#agentBox').style.display = agent ? '' : 'none';
+    const tb = $('[data-test]', m); if (tb) tb.style.display = agent ? 'none' : '';
+    setSessionMode(mode);
+  });
+  $('[data-save]', m).addEventListener('click', async () => {
+    const baseURL = $('#cfgBase').value.trim();
+    const model = $('#cfgModel').value.trim();
+    const apiKey = $('#cfgKey').value.trim();
+    S.ai.autoMode = $('#cfgAuto').value;
+    AICFG.baseURL = baseURL; AICFG.model = model;
+    if (IO.mode === 'server') {
+      const body = { baseURL, model };
+      if (apiKey) body.apiKey = apiKey;
+      const r = await fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const j = await r.json();
+      AICFG.hasKey = !!j.hasKey;
+    } else if (apiKey) { AICFG.apiKey = apiKey; AICFG.hasKey = true; }
+    try { localStorage.setItem('plotstudio.ai', JSON.stringify({ baseURL, model, autoMode: S.ai.autoMode })); } catch (e) {}
+    renderAiStatus(); closeMask();
+    toast(S.session.mode === 'agent' ? '已接入 Agent 会话' : '设置已保存', 'ok');
+  });
+  $('[data-test]', m).addEventListener('click', async e => {
+    e.target.textContent = '测试中…';
+    try {
+      const r = await aiCall({ model: $('#cfgModel').value.trim() || 'gpt-4o-mini',
+        messages: [{ role: 'user', content: '回复两个字：可用' }] });
+      toast('连接正常：' + (r.choices && r.choices[0] ? String(r.choices[0].message.content).slice(0, 40) : '已响应'), 'ok');
+    } catch (err) { toast('连接失败：' + err.message, 'err'); }
+    e.target.textContent = '测试连接';
+  });
+}
+
+/* ============================================================================
+   18 · 示例工程
+   ========================================================================== */
+function sampleProject() {
+  const p = newProject('示例：雾港之夜');
+  p.world = {
+    brief: '时代：架空的海港城邦末期，蒸汽与帆船并存，没有魔法，只有被误认为魔法的自然现象。\n' +
+           '基调：潮湿、克制、慢热。恐怖来自"本该发生却没有发生的事"，不来自怪物。\n' +
+           '核心意象：雾、灯、钟、锈。\n' +
+           '一条硬规则：雾港的雾每年随潮汐来去，从不在同一时间回归两次——今年它早了一个月。',
+    sections: [
+      { id: 'sec_1', title: '地理', text: '雾港建在一条没入海中的旧山脊上，分为上城与下城。上城的灯塔群负责为夜航船指路，下城的九号到十二号泊位在十二年前的一场海难后被封。' + '\n' + '东岬灯塔是唯一还立着的灯塔，铜钟在停用那年被人拆走。' },
+      { id: 'sec_2', title: '势力与人物', text: '守夜人公会名义上维护灯塔，实际早已名存实亡，只剩奎因一个老人。' + '\n' + '三只锚酒馆的老板是港口的非官方情报中枢，他收集海难故事，也收集失踪者的名字。' },
+      { id: 'sec_3', title: '禁忌与伏笔约定', text: '任何角色都不会主动说出"十二年前"这四个字。' + '\n' + '凡涉及海难的对话，必须有一个人转移话题——这个习惯本身是伏笔。' }
+    ]
+  };
+  const c1 = { id: 'ch_lin', name: '林·凡', aliases: ['小凡'], color: '#4a9eff', brief: '雾港的年轻信使。三年前在一场海难里失去了姐姐，从此不再靠近码头。\n他知道自己在逃避什么，但拒绝承认。', tags: ['主角'] };
+  const c2 = { id: 'ch_kui', name: '奎因', aliases: [], color: '#f06060', brief: '雾港的旧灯塔看守人，七十岁。说话极慢，从不直视别人的眼睛。\n他记得每一次海难，也记得自己当年没有点亮灯。', tags: ['关键人物'] };
+  const c3 = { id: 'ch_ya', name: '崖', aliases: ['戴斗笠的'], color: '#b07cff', brief: '身份不明的女人，总在雾最浓的时候出现。她似乎认识林·凡的姐姐。', tags: ['悬念'] };
+  p.characters = [c1, c2, c3];
+  const p1 = { id: 'pl_pier', name: '旧码头', parentId: '', color: '#b07cff', brief: '被废弃的九号泊位。铁链锈成深红色，退潮时会露出半截船骸。', tags: ['回忆'] };
+  const p2 = { id: 'pl_tower', name: '东岬灯塔', parentId: '', color: '#e0a13a', brief: '停用十二年的灯塔。塔顶的铜钟被人拆走，只剩下四个空挂钩。', tags: [] };
+  const p3 = { id: 'pl_inn', name: '三只锚酒馆', parentId: '', color: '#3fb9a0', brief: '雾港唯一还亮着灯的店。老板收集每一个客人讲过的海难故事。', tags: [] };
+  p.places = [p1, p2, p3];
+
+  p.axes = [
+    { id: 'ax_main', name: '主线：雾的来处', color: '#4a9eff', visible: true, brief: '跟踪"雾为什么会来"这条谜团的推进。不记录角色的日常。',
+      chapters: [
+        { id: 'ch_a1', title: '第一章 · 信使的雨天', brief: '建立雾港与林·凡的日常，埋下"姐姐"与"九号泊位"两个钩子。', start: 0, end: 320, children: [
+          { id: 'ch_a1s1', title: '日常与委托', brief: '', start: 0, end: 160, children: [] },
+          { id: 'ch_a1s2', title: '第一次异常', brief: '', start: 160, end: 320, children: [] }
+        ] },
+        { id: 'ch_a2', title: '第二章 · 灯塔不亮', brief: '把谜团推到面前：灯塔本该亮，却没有。', start: 320, end: 700, children: [] },
+        { id: 'ch_a3', title: '第三章 · 雾里的女人', brief: '', start: 700, end: 1000, children: [] }
+      ] },
+    { id: 'ax_char', name: '角色线：林·凡', color: '#e0a13a', visible: true, brief: '只跟踪林·凡对"姐姐之死"的态度变化，不记录外部事件，不用战斗细节。',
+      chapters: [
+        { id: 'ch_c1', title: '回避', brief: '', start: 0, end: 420, children: [] },
+        { id: 'ch_c2', title: '被迫面对', brief: '', start: 420, end: 760, children: [] },
+        { id: 'ch_c3', title: '承认', brief: '', start: 760, end: 1000, children: [] }
+      ] }
+  ];
+
+  const mk = (id, title, kind, trigger, t, y, summary, brief, chars, places, steps, choices) => ({
+    id, title, kind, trigger, t, y, summary, brief,
+    placeIds: places || [], characterIds: chars || [],
+    choices: choices || [], scene: { steps: steps || [] }, tags: [], color: ''
+  });
+  p.events = [
+    mk('ev_1', '雨中送信', 'main', 'passive', 40, -120, '林·凡接到一封没有署名的信，收件人写着他自己的名字。',
+       '信纸是用旧海图裁的，墨迹被雨泡开了一半。', ['ch_lin'], ['pl_inn'],
+       [{ id: 'st1', type: 'narr', fields: { text: '雾从傍晚开始起，比往年早了整整一个月。' }, children: [] },
+        { id: 'st2', type: 'main', fields: { speaker: '酒馆老板', text: '九号泊位？那地方退了潮才有东西看。', tone: '压低声音' }, children: [] }],
+       [{ id: 'op_1a', label: '当场拆信', note: '' }, { id: 'op_1b', label: '先把信收好', note: '更谨慎的路线' }]),
+    mk('ev_2', '雾气里的钟声', 'main', 'passive', 200, -40, '半夜，港口方向传来一声钟响——但铜钟早被拆走了。',
+       '', ['ch_lin'], ['pl_pier'],
+       [{ id: 'st3', type: 'check', fields: { skill: '意志', dc: '12', succ: '林·凡听清了钟声的方向', fail: '他想起三年前的那一夜' }, children: [] }], []),
+    mk('ev_3', '东岬的看守人', 'main', 'active', 380, -200, '林·凡爬上空灯塔，见到了奎因。老人说灯是他自己关掉的。',
+       '', ['ch_lin', 'ch_kui'], ['pl_tower'],
+       [{ id: 'st4', type: 'battle', fields: { enemies: '（无战斗，仅对峙）', env: '塔顶，风很大', win: '奎因开口', lose: '' }, children: [] }], []),
+    mk('ev_4', '戴斗笠的女人', 'main', 'active', 760, -300, '崖在灯塔下等他，说了一句只有姐姐才会说的话。',
+       '', ['ch_lin', 'ch_ya'], ['pl_tower'], [], []),
+    mk('ev_5', '九号泊位的船骸', 'side', 'active', 520, 180, '退潮后，林·凡在船骸里找到一只写着姐姐名字的箱子。',
+       '', ['ch_lin'], ['pl_pier'],
+       [{ id: 'st5', type: 'explore', fields: { target: '半截船骸', clues: '一只被撬开的木箱，锁是新的', dc: '13' }, children: [] }], []),
+    mk('ev_6', '老板的收藏', 'side', 'passive', 120, 220, '酒馆老板翻出十二年前的剪报，上面有奎因的名字。',
+       '如果林·凡当初没有拆信，他不会想到来问老板。', ['ch_lin'], ['pl_inn'], [], [])
+  ];
+  p.edges = [
+    { id: 'ed_1', from: 'ev_1', to: 'ev_2', viaChoiceId: '', requirements: [], note: '' },
+    { id: 'ed_2', from: 'ev_1', to: 'ev_6', viaChoiceId: 'op_1b', requirements: [], note: '只有先收好信，才会想起来打听' },
+    { id: 'ed_3', from: 'ev_2', to: 'ev_3', viaChoiceId: '', requirements: [], note: '' },
+    { id: 'ed_4', from: 'ev_3', to: 'ev_5', viaChoiceId: '', requirements: [], note: '' },
+    { id: 'ed_5', from: 'ev_3', to: 'ev_4', viaChoiceId: '',
+      requirements: [{ id: 'rq_1', type: 'flag', key: '在第二章听清了钟声的方向', value: '', note: '没听清就认不出崖说的话' }],
+      note: '示例：带额外门槛的依赖' }
+  ];
+  p.links = [
+    { id: 'lk_1', from: 'ev_6', to: 'ev_3', type: 'influence', label: '先知道名字', note: '如果先看过剪报，对峙时林·凡会直接叫出奎因的名字，走向另一段对白。' },
+    { id: 'lk_2', from: 'ev_1', to: 'ev_5', type: 'foreshadow', label: '九号泊位的钩子', note: '第一章埋下，第五章回收。' }
+  ];
+  p.view.camera = { x: 80, y: 380, zoom: 0.8 };
+  return p;
+}
+
+/* ============================================================================
+   19 · AI 层
+   ========================================================================== */
+const AICFG = { baseURL: '', model: '', apiKey: '', hasKey: false, keyTail: '' };
+
+const AI_TOOLS = [
+  { type: 'function', function: { name: 'read_world', description: '读取世界观总设定与分节。', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'list_entities', description: '列出全部角色、地点或轴（含各自的设定文本摘要）。', parameters: { type: 'object', properties: { kind: { type: 'string', enum: ['character', 'place', 'axis'] } }, required: ['kind'] } } },
+  { type: 'function', function: { name: 'get_entity', description: '读取单个角色 / 地点 / 轴 / 章节的完整设定文本。', parameters: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } } },
+  { type: 'function', function: { name: 'search_events', description: '按关键词搜索事件，匹配标题、摘要、详细设定与剧情步骤。', parameters: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } } },
+  { type: 'function', function: { name: 'get_event', description: '读取单个事件的完整信息：属性、选项、剧情步骤、依赖与引用线。', parameters: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } } },
+  { type: 'function', function: { name: 'list_timeline', description: '列出所有事件按逻辑时间排序的概览，以及每条轴的章节划分。', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'list_graph', description: '列出全部依赖与引用线，用于查看因果结构。', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'propose_patch', description: '提交一批改动建议。系统会按操作类型决定是自动写入还是等用户确认。这是唯一能修改工程的方式。', parameters: {
+      type: 'object',
+      properties: {
+        summary: { type: 'string', description: '一句话说明这批改动做了什么' },
+        ops: { type: 'array', description: '改动操作列表', items: { type: 'object', properties: {
+          op: { type: 'string', description: 'event.create | event.update | event.delete | edge.create | edge.update | edge.delete | link.create | link.update | link.delete | character.create | character.update | place.create | place.update | axis.update | chapter.update | world.update' },
+          id: { type: 'string' }, patch: { type: 'object' }, data: { type: 'object' },
+          from: { type: 'string' }, to: { type: 'string' }, viaChoiceId: { type: 'string' },
+          requirements: { type: 'array', description: '依赖的额外门槛，元素形如 {type:"flag|item|stat|choice|custom", key:"…", value:"…"}', items: { type: 'object' } },
+          type: { type: 'string', description: '引用线类型，或门槛类型' },
+          state: { type: 'string', description: '伏笔回收状态：open（已埋设未回收，默认）| closed（已回收）' },
+          label: { type: 'string' }, note: { type: 'string' }
+        } } }
+      }, required: ['summary', 'ops'] } } }
+];
+
+function aiSystemPrompt() {
+  return [
+    '你是一个游戏剧情设计助手，在为一个可视化剧情设计工具工作。你可以调用工具读取工程数据，并只能通过 propose_patch 提交改动。',
+    '',
+    '数据模型（务必遵守）：',
+    '- 轴 axis：一条独立的时间逻辑，有 name / brief(轴级设定) / chapters。章节由 start,end 定义，同轴章节首尾相接、不留空隙。',
+    '- 事件 event：{id,title,kind:"main|side",trigger:"passive|active",t,y,summary,brief,placeIds,characterIds,choices:[{id,label,note}],scene:{steps}}。',
+    '  t 是逻辑时间（水平轴，越大越晚），y 是自由纵向位置。事件不属于任何轴，因此同时出现在所有轴上；它属于哪一章由 t 与各轴章节区间求交算出，不要试图给事件写 chapterId。',
+    '- 依赖 edge：{from,to,viaChoiceId,requirements}。语义是"源事件完成且满足全部门槛后，目标解锁"。分支 = 依赖 + 源事件上某个 choices 的 id 填进 viaChoiceId。',
+    '  requirements 是额外门槛，元素形如 {type:"flag|item|stat|choice|custom", key, value}，例如 {type:"item", key:"锈蚀的钥匙"}。',
+    '- 引用线 link：{from,to,type,label,note,state}。type ∈ influence|echo|foreshadow|parallel|note，表示非强依赖的叙事关联。',
+    '  其中 foreshadow 必须带 state：open（已埋设、尚未回收）或 closed（已回收）。埋设与回收分别用两条指向彼此的引用线表达，回收时把埋设那条改成 closed。',
+    '- 剧情步骤 step：{id,type,fields}。type ∈ main(对白)/narr(旁白)/battle(战斗)/explore(探索)/check(检定)/move(移动)/reward(结算)/custom。',
+    '',
+    '工作方式：',
+    '- 先检索再动手。涉及具体人物、地点、时间或既有事件时，先用工具把它们读出来，不要凭空编造与设定冲突的内容。',
+    '- 保持设定一致性：角色性格、地点氛围、世界观规则以工程中的设定文本为准。',
+    '- 补故事时优先制造因果与伏笔，而不是堆砌新地点新角色。能用 link 表达的影响关系就用 link，不要滥用依赖。',
+    '- 新增事件要给出合理的 t 与 y，避免与既有节点重叠位置。',
+    '- 修改完成后，用一段简短的中文说明你改了什么、为什么，以及留下了哪些伏笔。',
+    '- 不要输出 JSON 代码块作为最终回答，改动一律通过 propose_patch 提交。'
+  ].join('\n');
+}
+
+function buildContextPreview() {
+  const s = S.selection;
+  const lines = [];
+  lines.push('【世界观】' + (P.world.brief ? P.world.brief.slice(0, 120).replace(/\n/g, ' ') : '（空）'));
+  const axs = P.axes.filter(a => a.visible);
+  for (const a of axs) {
+    const { chapter, sub } = s && s.type === 'event' ? chapterAt(a, (eventById(s.id) || { t: 0 }).t) : { chapter: null, sub: null };
+    lines.push('【轴】' + a.name + (a.brief ? ' — ' + a.brief.slice(0, 60).replace(/\n/g, ' ') : '') +
+      (chapter ? '  ▸ 当前落在：' + chapter.title + (sub ? ' / ' + sub.title : '') : ''));
+  }
+  if (s && s.type === 'event') {
+    const ev = eventById(s.id);
+    if (ev) {
+      lines.push('【选中事件】' + ev.title + ' — ' + (ev.summary || '（无摘要）'));
+      for (const cid of ev.characterIds) { const c = charById(cid); if (c) lines.push('【角色】' + c.name + ' — ' + (c.brief || '').slice(0, 80).replace(/\n/g, ' ')); }
+      for (const pid of ev.placeIds) { const pl = placeById(pid); if (pl) lines.push('【地点】' + pl.name + ' — ' + (pl.brief || '').slice(0, 80).replace(/\n/g, ' ')); }
+    }
+  }
+  if (S.ai.scope === 'global') lines.push('【范围】整个工程：' + P.events.length + ' 事件 / ' + P.characters.length + ' 角色 / ' + P.places.length + ' 地点');
+  else if (S.ai.scope === 'chapter') lines.push('【范围】当前章节及其全部事件');
+  else lines.push('【范围】当前选中对象的邻域（一跳）');
+  return lines.join('\n');
+}
+
+async function aiCall(body) {
+  const payload = Object.assign({ model: AICFG.model || 'gpt-4o-mini', stream: false }, body);
+  if (IO.mode === 'server') {
+    const r = await fetch('/api/ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ payload }) });
+    const text = await r.text();
+    let j; try { j = JSON.parse(text); } catch (e) { throw new Error(text.slice(0, 200)); }
+    if (!r.ok) throw new Error(j.error + (j.detail ? '：' + j.detail.slice(0, 200) : ''));
+    return j;
+  }
+  if (!AICFG.baseURL) throw new Error('尚未配置接口地址');
+  const r = await fetch(AICFG.baseURL.replace(/\/+$/, '') + '/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AICFG.apiKey },
+    body: JSON.stringify(payload)
+  });
+  const text = await r.text();
+  let j; try { j = JSON.parse(text); } catch (e) { throw new Error(text.slice(0, 200)); }
+  if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+  return j;
+}
+
+const TOOL_IMPL = {
+  read_world: () => ({ brief: P.world.brief, sections: P.world.sections }),
+  list_entities: a => {
+    if (a.kind === 'character') return P.characters.map(c => ({ id: c.id, name: c.name, aliases: c.aliases, tags: c.tags, brief: c.brief }));
+    if (a.kind === 'place') return P.places.map(c => ({ id: c.id, name: c.name, parentId: c.parentId, tags: c.tags, brief: c.brief }));
+    return P.axes.map(x => ({ id: x.id, name: x.name, brief: x.brief, visible: x.visible, chapters: x.chapters.map(k => ({ id: k.id, title: k.title, brief: k.brief, start: k.start, end: k.end })) }));
+  },
+  get_entity: a => {
+    const c = charById(a.id); if (c) return c;
+    const p = placeById(a.id); if (p) return p;
+    const x = axisById(a.id); if (x) return { id: x.id, name: x.name, brief: x.brief, chapters: x.chapters };
+    const k = findChapter(a.id); if (k) return { id: k.ch.id, title: k.ch.title, brief: k.ch.brief, start: k.ch.start, end: k.ch.end, axis: k.axis.name };
+    return { error: '未找到 ' + a.id };
+  },
+  search_events: a => {
+    const q = String(a.query || '').toLowerCase();
+    return P.events.filter(e =>
+      (e.title + ' ' + e.summary + ' ' + e.brief + ' ' + e.scene.steps.map(s => JSON.stringify(s.fields)).join(' '))
+        .toLowerCase().indexOf(q) >= 0
+    ).map(e => ({ id: e.id, title: e.title, t: e.t, kind: e.kind, summary: e.summary })).slice(0, 30);
+  },
+  get_event: a => {
+    const e = eventById(a.id);
+    if (!e) return { error: '未找到 ' + a.id };
+    const chapters = P.axes.map(x => { const c = chapterAt(x, e.t); return { axis: x.name, chapter: c.chapter && c.chapter.title, sub: c.sub && c.sub.title }; });
+    return {
+      id: e.id, title: e.title, kind: e.kind, trigger: e.trigger, t: e.t, y: e.y,
+      summary: e.summary, brief: e.brief,
+      places: e.placeIds.map(i => { const p = placeById(i); return p && p.name; }),
+      characters: e.characterIds.map(i => { const c = charById(i); return c && c.name; }),
+      chaptersDerived: chapters,
+      choices: e.choices,
+      scene: e.scene.steps,
+      edgesOut: P.edges.filter(g => g.from === e.id).map(g => ({ id: g.id, to: g.to, viaChoiceId: g.viaChoiceId })),
+      edgesIn: P.edges.filter(g => g.to === e.id).map(g => ({ id: g.id, from: g.from, viaChoiceId: g.viaChoiceId })),
+      links: P.links.filter(g => g.from === e.id || g.to === e.id)
+    };
+  },
+  list_timeline: () => ({
+    axes: P.axes.map(x => ({ id: x.id, name: x.name, brief: x.brief, chapters: x.chapters.map(k => ({ title: k.title, brief: k.brief, start: k.start, end: k.end, children: (k.children || []).map(s => ({ title: s.title, start: s.start, end: s.end })) })) })),
+    events: P.events.slice().sort((a, b) => a.t - b.t).map(e => ({
+      id: e.id, title: e.title, t: e.t, y: e.y, kind: e.kind, trigger: e.trigger, summary: e.summary,
+      chapterOfMainAxis: (() => { const c = chapterAt(P.axes[0], e.t); return c.chapter && c.chapter.title; })()
+    }))
+  }),
+  list_graph: () => ({
+    edges: P.edges.map(g => ({
+      id: g.id, from: eventById(g.from) && eventById(g.from).title,
+      to: eventById(g.to) && eventById(g.to).title, via: g.viaChoiceId,
+      requirements: g.requirements.map(r => (REQ_TYPES[r.type] || {}).name + ':' + r.key)
+    })),
+    links: P.links.map(g => ({
+      id: g.id, from: eventById(g.from) && eventById(g.from).title,
+      to: eventById(g.to) && eventById(g.to).title, type: g.type, note: g.note,
+      state: g.type === 'foreshadow' ? (g.state || 'open') : ''
+    })),
+    openForeshadows: P.links.filter(l => l.type === 'foreshadow' && l.state !== 'closed').map(l => ({
+      id: l.id,
+      plantedAt: eventById(l.from) && eventById(l.from).title,
+      plannedPayoffAt: eventById(l.to) && eventById(l.to).title,
+      label: l.label, note: l.note
+    }))
+  }),
+  propose_patch: a => {
+    const prop = { id: uid('pp'), summary: a.summary || '（无说明）', ops: a.ops || [] };
+    prop.textOnly = prop.ops.every(isTextOp);
+    S.ai.pending = S.ai.pending || [];
+    S.ai.pending.push(prop);
+    setTimeout(() => { renderChat(); if (prop.textOnly && S.ai.autoMode === 'text') applyProposal(prop.id); }, 0);
+    return { ok: true, note: prop.textOnly ? '文本类改动，已按设置处理' : '结构类改动，等待用户确认', ops: prop.ops.length };
+  }
+};
+
+/** 把外部（AI / agent）给的 requirements 规范化成内部结构 */
+function normReqs(list) {
+  return (list || []).map(r => ({
+    id: r.id || uid('rq'),
+    type: REQ_TYPES[r.type] ? r.type : 'custom',
+    key: r.key || '', value: r.value || '', note: r.note || ''
+  }));
+}
+
+/** 只有不改动图拓扑、且不新增删除实体的操作才算文本类（ADR-0005） */
+function isTextOp(op) {
+  const textOnly = { 'event.update': 1, 'character.update': 1, 'place.update': 1, 'axis.update': 1, 'chapter.update': 1, 'world.update': 1 };
+  if (!textOnly[op.op]) return false;
+  const p = op.patch || {};
+  const structural = ['t', 'y', 'kind', 'trigger', 'placeIds', 'characterIds', 'choices', 'start', 'end', 'chapters', 'color', 'parentId', 'visible'];
+  return !structural.some(k => k in p);
+}
+
+function diffLines(prop) {
+  // 同一批改动里新建的实体，连线说明要能直接显示它们的名字而不是裸 id
+  const fresh = {};
+  for (const op of prop.ops) {
+    if (!op.data) continue;
+    if (op.op === 'event.create') fresh[op.data.id] = op.data.title;
+    if (op.op === 'character.create') fresh[op.data.id] = op.data.name;
+    if (op.op === 'place.create') fresh[op.data.id] = op.data.name;
+  }
+  const label = id => {
+    const e = eventById(id); if (e) return e.title;
+    const c = charById(id); if (c) return c.name;
+    const p = placeById(id); if (p) return p.name;
+    return fresh[id] || id;
+  };
+  const out = [];
+  for (const op of prop.ops) {
+    if (op.op === 'event.create') {
+      out.push({ cls: 'diff-add', t: '+ 新增事件「' + (op.data.title || op.data.id || '') + '」(t=' + (op.data.t || 0) + ')' });
+    } else if (op.op === 'event.delete') {
+      const e = eventById(op.id);
+      out.push({ cls: 'diff-del', t: '- 删除事件「' + (e ? e.title : op.id) + '」及其全部连线' });
+    } else if (op.op === 'event.update') {
+      const e = eventById(op.id);
+      for (const k in (op.patch || {})) {
+        const before = e ? JSON.stringify(e[k]) : '—';
+        out.push({ cls: 'diff-ctx', t: '  ' + (e ? e.title : op.id) + ' · ' + k + ': ' + String(before).slice(0, 60) });
+        out.push({ cls: 'diff-add', t: '+ ' + JSON.stringify(op.patch[k]).slice(0, 160) });
+      }
+    } else if (op.op === 'edge.create') {
+      const reqs = (op.requirements || []).map(r => (REQ_TYPES[r.type] ? REQ_TYPES[r.type].name : '条件') + ':' + (r.key || '—'));
+      out.push({ cls: 'diff-add', t: '+ 依赖：' + label(op.from) + ' → ' + label(op.to) +
+        (op.viaChoiceId ? '（经某选项）' : '') + (reqs.length ? ' + 门槛 ' + reqs.join('，') : '') });
+    } else if (op.op === 'edge.update') {
+      const g0 = P.edges.find(x => x.id === op.id);
+      for (const k in (op.patch || {})) {
+        out.push({ cls: 'diff-add', t: '+ 依赖更新' + (g0 ? '（' + label(g0.from) + ' → ' + label(g0.to) + '）' : '') + ' · ' + k + ' = ' + JSON.stringify(op.patch[k]).slice(0, 140) });
+      }
+    } else if (op.op === 'edge.delete') {
+      const g = P.edges.find(x => x.id === op.id);
+      out.push({ cls: 'diff-del', t: '- 删除依赖：' + label(g ? g.from : '?') + ' → ' + label(g ? g.to : '?') });
+    } else if (op.op === 'link.create') {
+      out.push({ cls: 'diff-add', t: '+ 引用线：' + label(op.from) + ' ⇢ ' + label(op.to) +
+        '（' + (LINK_TYPES[op.type] ? LINK_TYPES[op.type].name : op.type || '影响') +
+        (op.type === 'foreshadow' && op.state !== 'closed' ? ' · 未回收' : '') + '）' });
+    } else if (op.op === 'link.update') {
+      const l0 = P.links.find(x => x.id === op.id);
+      for (const k in (op.patch || {})) {
+        out.push({ cls: 'diff-add', t: '+ 引用线更新' + (l0 ? '（' + label(l0.from) + ' ⇢ ' + label(l0.to) + '）' : '') + ' · ' + k + ' = ' + JSON.stringify(op.patch[k]).slice(0, 140) });
+      }
+    } else if (op.op === 'link.delete') {
+      out.push({ cls: 'diff-del', t: '- 删除引用线 ' + op.id });
+    } else if (op.op === 'character.create' || op.op === 'place.create') {
+      out.push({ cls: 'diff-add', t: '+ 新增' + (op.op.indexOf('character') === 0 ? '角色' : '地点') + '「' + ((op.data && op.data.name) || '') + '」' });
+    } else if (op.op === 'character.update' || op.op === 'place.update' || op.op === 'axis.update' || op.op === 'chapter.update' || op.op === 'world.update') {
+      for (const k in (op.patch || {})) out.push({ cls: 'diff-add', t: '+ ' + op.op + ' · ' + k + ' = ' + JSON.stringify(op.patch[k]).slice(0, 140) });
+    } else {
+      out.push({ cls: 'diff-ctx', t: '  ' + op.op });
+    }
+  }
+  return out;
+}
+
+function applyProposal(pid) {
+  const list = S.ai.pending || [];
+  const i = list.findIndex(x => x.id === pid);
+  if (i < 0) return;
+  const prop = list[i];
+  pushUndo();
+  const created = [];
+  for (const op of prop.ops) {
+    try {
+      if (op.op === 'event.create') {
+        const ev = newEvent(op.data.t || 0, op.data.y || 0);
+        Object.assign(ev, op.data, { id: op.data.id && !eventById(op.data.id) ? op.data.id : uid('ev') });
+        ev.scene = { steps: (op.data.scene && op.data.scene.steps) || [] };
+        ev.choices = op.data.choices || [];
+        ev.placeIds = op.data.placeIds || []; ev.characterIds = op.data.characterIds || [];
+        P.events.push(ev); created.push(ev.id);
+      } else if (op.op === 'event.update') {
+        const e = eventById(op.id); if (e) Object.assign(e, op.patch || {});
+      } else if (op.op === 'event.delete') {
+        P.events = P.events.filter(x => x.id !== op.id);
+        P.edges = P.edges.filter(g => g.from !== op.id && g.to !== op.id);
+        P.links = P.links.filter(g => g.from !== op.id && g.to !== op.id);
+      } else if (op.op === 'edge.create') {
+         if (eventById(op.from) && eventById(op.to) && !P.edges.some(g => g.from === op.from && g.to === op.to)) {
+          P.edges.push({ id: uid('ed'), from: op.from, to: op.to, viaChoiceId: op.viaChoiceId || '',
+             requirements: normReqs(op.requirements), note: op.note || '' });
+         }
+       } else if (op.op === 'edge.update') {
+         const g = P.edges.find(x => x.id === op.id);
+         if (g) {
+           Object.assign(g, op.patch || {});
+           if ('requirements' in (op.patch || {})) g.requirements = normReqs(op.patch.requirements);
+         }
+       } else if (op.op === 'edge.delete') {
+        P.edges = P.edges.filter(g => g.id !== op.id);
+      } else if (op.op === 'link.create') {
+         if (eventById(op.from) && eventById(op.to)) {
+           P.links.push({ id: uid('lk'), from: op.from, to: op.to, type: op.type || 'influence',
+             label: op.label || '', note: op.note || '',
+             state: (op.type === 'foreshadow' && op.state === 'closed') ? 'closed' : (op.type === 'foreshadow' ? 'open' : '') });
+         }
+       } else if (op.op === 'link.update') {
+         const g = P.links.find(x => x.id === op.id);
+         if (g) Object.assign(g, op.patch || {});
+       } else if (op.op === 'link.delete') {
+        P.links = P.links.filter(g => g.id !== op.id);
+      } else if (op.op === 'character.create') {
+        const c = Object.assign({ id: uid('ch'), name: '新角色', aliases: [], color: '#f06060', brief: '', tags: [] }, op.data || {});
+        P.characters.push(c); created.push(c.id);
+      } else if (op.op === 'character.update') {
+        const c = charById(op.id); if (c) Object.assign(c, op.patch || {});
+      } else if (op.op === 'place.create') {
+        const c = Object.assign({ id: uid('pl'), name: '新地点', parentId: '', color: '#b07cff', brief: '', tags: [] }, op.data || {});
+        P.places.push(c); created.push(c.id);
+      } else if (op.op === 'place.update') {
+        const c = placeById(op.id); if (c) Object.assign(c, op.patch || {});
+      } else if (op.op === 'axis.update') {
+        const x = axisById(op.id); if (x) Object.assign(x, op.patch || {});
+      } else if (op.op === 'chapter.update') {
+        const k = findChapter(op.id);
+        if (k) {
+          Object.assign(k.ch, op.patch || {});
+          if (k.path.length === 1) { k.axis.chapters = tileChapters(k.axis.chapters, 0, 1000); }
+          else clampChildren(k.path[0]);
+        }
+      } else if (op.op === 'world.update') {
+        Object.assign(P.world, op.patch || {});
+      }
+    } catch (e) { /* 单个操作失败不影响其余 */ }
+  }
+  P = normalize(P);
+  list.splice(i, 1);
+  prop.applied = true;
+  prop.created = created;
+  S.ai.applied = S.ai.applied || [];
+  S.ai.applied.push(prop);
+  markDirty();
+  renderAll();
+  if (created.length) { S.selection = { type: 'event', id: created[0] }; renderInspector(); }
+  toast('AI 改动已写入（可撤销）', 'ok');
+  renderChat();
+}
+function undoLastAiApply() {
+  if (!S.ai.applied || !S.ai.applied.length) return;
+  undo();
+  const p = S.ai.applied.pop();
+  toast('已撤销 AI 操作：' + p.summary);
+}
+async function rejectProposal(pid) {
+  S.ai.pending = (S.ai.pending || []).filter(x => x.id !== pid);
+  S.ai.api.push({ role: 'user', content: '[系统] 用户拒绝了这个提案，请不要重复提交它，改为调整思路后重新提案。' });
+  renderChat();
+}
+
+async function runAgent(userText) {
+  S.ai.busy = true;
+  renderAiStatus();
+  const shown = { role: 'assistant', content: '', tools: [] };
+  S.ai.messages.push({ role: 'user', content: userText });
+  renderChat();
+  S.ai.api.push({ role: 'user', content: userText });
+
+  try {
+    for (let round = 0; round < 8; round++) {
+      const body = {
+        messages: [{ role: 'system', content: aiSystemPrompt() }].concat(S.ai.api.slice(-40)),
+        tools: AI_TOOLS,
+        tool_choice: 'auto',
+        temperature: 0.8
+      };
+      const j = await aiCall(body);
+      const msg = j.choices && j.choices[0] && j.choices[0].message;
+      if (!msg) throw new Error('返回格式异常');
+      S.ai.api.push(msg);
+
+      if (msg.tool_calls && msg.tool_calls.length) {
+        const names = msg.tool_calls.map(t => t.function.name);
+        S.ai.messages.push({ role: 'tool', content: '调用 ' + names.join('、') });
+        renderChat();
+        for (const call of msg.tool_calls) {
+          let args = {};
+          try { args = JSON.parse(call.function.arguments || '{}'); } catch (e) {}
+          const impl = TOOL_IMPL[call.function.name];
+          let result;
+          try { result = impl ? impl(args) : { error: '未实现的工具' }; }
+          catch (err) { result = { error: String(err.message || err) }; }
+          S.ai.api.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result).slice(0, 12000) });
+        }
+        continue;
+      }
+      const content = msg.content || '';
+      S.ai.messages.push({ role: 'assistant', content: content });
+      renderChat();
+      break;
+    }
+  } catch (e) {
+    S.ai.messages.push({ role: 'assistant', content: '出错：' + e.message, err: true });
+    renderChat();
+  }
+  S.ai.busy = false;
+  renderAiStatus();
+}
+
+function quickPrompt(kind) {
+  const s = S.selection;
+  const target = s && s.type === 'event' ? '当前选中的事件' : '当前内容';
+  const map = {
+    continue: '请基于' + target + '，续写 2 到 4 个后续事件，并用依赖把它们连起来。要求：位置合理，不要与已有节点重叠，并说明每一步的动机。',
+    conflict: '请为' + target + '设计 2 个有张力的冲突方案，要能推动既有任务线，并指出冲突会如何改变相关角色的处境。然后挑一个最合适的落成事件。',
+    foreshadow: '请检查整个工程的依赖与引用线，找出可以埋设伏笔的位置，并用引用线（type=foreshadow）把它们连起来。至少给出 2 组埋设与回收。',
+    link: '请找出当前工程中断裂或缺失的因果关联，用引用线补上，并说明每条引用线的叙事理由。',
+    chapter: '请读一遍当前轴的章节划分与各章节设定，指出哪些章节缺少明确的框定或目标，并给出改写后的章节设定文本。',
+    detail: '请为' + target + '补全剧情细节（场景步骤），要求步骤类型多样、信息具体，能直接交给编剧落地。'
+  };
+  return map[kind] || '';
+}
+
+/* ---- AI 界面 ---- */
+function renderAiChrome() {
+  $('#aiBody').innerHTML =
+    '<div class="ai-left">' +
+      '<div class="ai-sec-title">上下文范围</div>' +
+      '<div class="ctx-scope" id="scopeBox">' +
+        '<div class="scope-opt" data-scope="neighbor">当前对象 + 一跳邻域</div>' +
+        '<div class="scope-opt" data-scope="chapter">当前章节 + 相关实体</div>' +
+        '<div class="scope-opt" data-scope="global">整个工程</div>' +
+      '</div>' +
+      '<div class="ai-sec-title">将自动装入</div>' +
+      '<div class="ctx-preview" id="ctxPreview"></div>' +
+      '<div class="ai-sec-title">快捷指令</div>' +
+      '<div class="ctx-scope">' +
+        '<div class="scope-opt" data-quick="continue">续写后续事件</div>' +
+        '<div class="scope-opt" data-quick="conflict">生成冲突方案</div>' +
+        '<div class="scope-opt" data-quick="foreshadow">检查并补埋伏笔</div>' +
+        '<div class="scope-opt" data-quick="link">补全缺失关联</div>' +
+        '<div class="scope-opt" data-quick="chapter">审视章节设定</div>' +
+        '<div class="scope-opt" data-quick="detail">补全剧情细节</div>' +
+      '</div>' +
+      '<div class="ai-sec-title">AI 写入记录</div>' +
+      '<button class="btn sm block" id="btnUndoAi">撤销最近一次 AI 写入</button>' +
+      '<div class="hint-box" style="margin-top:8px;font-size:10.5px">AI 只能通过"提案"改工程。文本类改动自动写入，' +
+      '增删事件、改依赖等结构类改动需要你在卡片上点确认。</div>' +
+    '</div>' +
+    '<div class="ai-main">' +
+      '<div class="chat-scroll" id="chatScroll"></div>' +
+      '<div class="chat-input">' +
+        '<textarea id="aiInput" placeholder="就你选中的对象提问，或直接下达需求。Ctrl+Enter 发送。"></textarea>' +
+        '<div class="chat-row">' +
+          '<span class="hint" id="aiScopeHint"></span>' +
+          '<div style="flex:1"></div>' +
+          '<button class="btn primary sm" id="btnAiSend">发送</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  $$('#scopeBox .scope-opt').forEach(n => n.addEventListener('click', () => {
+    S.ai.scope = n.dataset.scope;
+    renderAiStatus(); renderChat();
+  }));
+  $$('[data-quick]').forEach(n => n.addEventListener('click', () => {
+    const text = quickPrompt(n.dataset.quick);
+    if (!text) return;
+    S.ai.open = true; $('#aiDrawer').classList.remove('closed');
+    $('#aiCaret').textContent = '▼';
+    submitPrompt(text);
+  }));
+  $('#btnAiSend').addEventListener('click', sendAi);
+  $('#aiInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendAi(); }
+  });
+  $('#btnUndoAi').addEventListener('click', undoLastAiApply);
+}
+function sendAi() {
+  const t = $('#aiInput').value.trim();
+  if (!t) return;
+  if (S.ai.busy && S.session.mode !== 'agent') { toast('AI 正在处理，请稍候', 'warn'); return; }
+  $('#aiInput').value = '';
+  submitPrompt(t);
+}
+/** 统一的提问入口：直连模式下自己跑 agent 循环，会话模式下把话投给外部 agent */
+async function submitPrompt(text) {
+  if (!text) return;
+  if (S.session.mode === 'agent') {
+    S.ai.messages.push({ role: 'user', content: text });
+    renderChat();
+    if (IO.mode !== 'server') { toast('接入 Agent 会话需要先启动本地服务（启动.bat）', 'err', 5200); return; }
+    try {
+      const r = await fetch('/api/session/send', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text, context: sessionContext() })
+      });
+      if (!r.ok) throw new Error((await r.json()).error || ('HTTP ' + r.status));
+    } catch (e) {
+      toast('发送失败：' + e.message, 'err');
+      S.ai.messages.push({ role: 'assistant', content: '发送失败：' + e.message });
+      renderChat();
+    }
+    return;
+  }
+  runAgent(text);
+}
+function renderAiStatus() {
+  const p = $('#aiPill'), tx = $('#aiPillText');
+  if (!p) return;
+  if (S.session.mode === 'agent') {
+    if (!S.session.connected) { p.className = 'pill warn'; tx.textContent = 'Agent 会话未连接'; }
+    else if (S.session.agentListening === false) { p.className = 'pill warn'; tx.textContent = '等待 agent 接入'; }
+    else { p.className = 'pill ok'; tx.textContent = 'Agent 会话已接入'; }
+  } else if (S.ai.busy) { p.className = 'pill busy'; tx.textContent = '思考中'; }
+  else if (IO.mode !== 'server' && !AICFG.hasKey) { p.className = 'pill warn'; tx.textContent = '受限模式 · 未配置模型'; }
+  else if (!AICFG.baseURL || !AICFG.hasKey) { p.className = 'pill warn'; tx.textContent = '未配置模型'; }
+  else { p.className = 'pill ok'; tx.textContent = AICFG.model || '已配置'; }
+
+  $$('#scopeBox .scope-opt').forEach(n => n.classList.toggle('on', n.dataset.scope === S.ai.scope));
+  const prev = $('#ctxPreview'); if (prev) prev.textContent = buildContextPreview();
+  const hint = $('#aiScopeHint');
+  if (hint) {
+    const s = S.selection;
+    hint.textContent = s ? '已选中：' + selLabel(s) : '未选中对象（可全局提问）';
+  }
+}
+function selLabel(s) {
+  if (s.type === 'event') { const e = eventById(s.id); return e ? e.title : '事件'; }
+  if (s.type === 'axis') { const a = axisById(s.id); return a ? a.name : '轴'; }
+  if (s.type === 'character') { const c = charById(s.id); return c ? c.name : '角色'; }
+  if (s.type === 'place') { const c = placeById(s.id); return c ? c.name : '地点'; }
+  if (s.type === 'chapter') { const k = findChapter(s.id); return k ? (k.ch.title || '章节') : '章节'; }
+  if (s.type === 'world') return '世界观';
+  return s.type;
+}
+function renderChat() {
+  const box = $('#chatScroll');
+  if (!box) return;
+  const parts = [];
+  // 会话模式下先说清楚有没有人在听，免得用户以为消息发出去了
+  if (S.session.mode === 'agent' && S.session.agentListening === false) {
+    parts.push('<div class="hint-box" style="border-color:rgba(227,162,60,.4);background:rgba(227,162,60,.07)">' +
+      '<b>当前没有 agent 在监听这个会话。</b><br>' +
+      '你发出的消息会排队等待，直到有 agent 用 <code>python agent.py poll</code> 取走。' +
+      '如果你并不打算接 agent，把「会话与模型」切回「页面直连模型」即可。</div>');
+  }
+  for (const m of S.ai.messages) {
+    if (m.role === 'user') {
+      parts.push('<div class="msg user"><div class="av">你</div><div class="bd">' +
+        '<div class="who">你</div><div class="bubble">' + esc(m.content) + '</div></div></div>');
+    } else if (m.role === 'tool') {
+      parts.push('<div class="msg"><div class="av">⚙</div><div class="bd">' +
+        '<div class="bubble" style="color:var(--text-faint);font-size:11.5px">' + esc(m.content) + '</div></div></div>');
+    } else if (m.role === 'assistant') {
+      parts.push('<div class="msg ai"><div class="av">AI</div><div class="bd">' +
+        '<div class="who">助手</div><div class="bubble">' + mdLite(m.content) + '</div></div></div>');
+    }
+  }
+  for (const prop of (S.ai.pending || [])) {
+    const diff = diffLines(prop).map(l => '<span class="' + l.cls + '">' + esc(l.t) + '</span>').join('\n');
+    parts.push('<div class="msg ai"><div class="av">AI</div><div class="bd"><div class="proposal">' +
+      '<div class="p-head"><span class="p-kind">待确认</span><span class="p-title">' + esc(prop.summary) + '</span>' +
+      '<span class="hint" style="font-size:10.5px;color:var(--text-faint)">' + prop.ops.length + ' 项改动</span></div>' +
+      '<div class="p-diff">' + diff + '</div>' +
+      '<div class="p-acts"><button class="btn primary sm" data-apply="' + prop.id + '">应用这批改动</button>' +
+      '<button class="btn sm" data-reject="' + prop.id + '">丢弃</button></div></div></div></div>');
+  }
+  for (const prop of (S.ai.applied || []).slice(-4)) {
+    parts.push('<div class="msg ai"><div class="av">AI</div><div class="bd"><div class="proposal" style="border-color:rgba(63,185,80,.35);background:rgba(63,185,80,.05)">' +
+      '<div class="p-head"><span class="p-kind auto">已写入</span><span class="p-title">' + esc(prop.summary) + '</span></div>' +
+      '</div></div></div>');
+  }
+  if (S.ai.busy) parts.push('<div class="msg ai"><div class="av">AI</div><div class="bd"><div class="bubble"><span class="spin"></span> 正在检索工程并思考…</div></div></div>');
+  if (!parts.length) parts.push('<div class="empty-note" style="padding:24px;text-align:center">' +
+    (S.session.mode === 'agent'
+      ? '本页已接入 Agent 会话。选中任意角色、地点、章节或事件后在这里提问，<br>你的话会直接投递给 agent，回复与改动会实时回到这里。'
+      : '选中任意角色、地点、章节或事件，然后在下面提问。也可以直接全局提问，例如"帮我检查主线有没有断掉的因果"。<br><br>' +
+        'AI 会自己检索世界观、角色设定、地点设定与时间线，再提出改动。') +
+    '</div>');
+
+  box.innerHTML = parts.join('');
+  $$('[data-apply]', box).forEach(n => n.addEventListener('click', () => applyProposal(n.dataset.apply)));
+  $$('[data-reject]', box).forEach(n => n.addEventListener('click', () => rejectProposal(n.dataset.reject)));
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ============================================================================
+   19b · Agent 会话桥
+   页面被 agent 加载为它界面的一部分时，对话框不再直连模型，而是与 agent 会话互通：
+   用户消息投进 /api/session/send，agent 的回复、改动提案与界面指令经由
+   /api/session/stream 推回来。协议见 AGENT-BRIDGE.md。
+   ========================================================================== */
+function sessionContext() {
+  const s = S.selection;
+  const ev = s && s.type === 'event' ? eventById(s.id) : null;
+  const ch = s && s.type === 'chapter' ? findChapter(s.id) : null;
+  return {
+    file: IO.file || '',
+    project: P.meta.name || '',
+    view: S.viewMode,
+    focus: S.focusId || '',
+    selection: s ? { type: s.type, id: s.id, label: selLabel(s) } : null,
+    event: ev ? {
+      id: ev.id, title: ev.title, kind: ev.kind, trigger: ev.trigger,
+      t: ev.t, y: ev.y, summary: ev.summary,
+      chapterOf: P.axes.map(a => {
+        const c = chapterAt(a, ev.t);
+        return a.name + '：' + (c.chapter ? (c.chapter.title || '未命名') : '—');
+      })
+    } : null,
+    chapter: ch ? { id: ch.ch.id, title: ch.ch.title, axis: ch.axis.name, start: ch.ch.start, end: ch.ch.end } : null,
+    counts: {
+      events: P.events.length, characters: P.characters.length, places: P.places.length,
+      axes: P.axes.length, edges: P.edges.length, links: P.links.length
+    }
+  };
+}
+
+const reportSession = debounce(function () {
+  if (IO.mode !== 'server') return;
+  fetch('/api/session/report', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(sessionContext())
+  }).catch(() => {});
+}, 500);
+
+async function pollSessionStatus() {
+  if (IO.mode !== 'server') { S.session.connected = false; S.session.agentListening = false; renderAiStatus(); return; }
+  try {
+    const r = await fetch('/api/session/status');
+    const j = await r.json();
+    const wasListening = S.session.agentListening;
+    S.session.connected = !!j.pageConnected || true;
+    S.session.agentListening = !!j.agentListening;
+    if (wasListening !== S.session.agentListening) renderChat();
+  } catch (e) {
+    S.session.connected = false;
+  }
+  renderAiStatus();
+}
+
+function setSessionMode(mode) {
+  S.session.mode = mode;
+  try { localStorage.setItem('plotstudio.sessionMode', mode); } catch (e) {}
+  if (mode === 'agent') startSessionStream(); else stopSessionStream();
+  renderAiStatus(); renderChat();
+  reportSession();
+}
+
+function stopSessionStream() {
+  if (S.session.es) { try { S.session.es.close(); } catch (e) {} S.session.es = null; }
+  S.session.connected = false;
+}
+
+async function startSessionStream() {
+  if (IO.mode !== 'server') { S.session.connected = false; renderAiStatus(); return; }
+  stopSessionStream();
+  // 先把已有对话恢复出来，再把游标推到末尾——否则重开会把历史上的提案与指令重放一遍
+  try {
+    const r = await fetch('/api/session/log?since=0');
+    const j = await r.json();
+    const items = (j.items || []).filter(m => (m.text || '').trim());
+    S.ai.messages = items.slice(-80).map(m => ({
+      role: m.from === 'user' ? 'user' : 'assistant',
+      content: m.text
+    }));
+    S.session.since = items.length ? items[items.length - 1].id : 0;
+  } catch (e) { S.session.since = 0; }
+  renderChat();
+
+  const es = new EventSource('/api/session/stream?since=' + S.session.since);
+  es.addEventListener('item', ev => {
+    let it = null;
+    try { it = JSON.parse(ev.data); } catch (e) { return; }
+    if (!it) return;
+    S.session.since = Math.max(S.session.since, it.id);
+    if (it.from === 'agent') handleAgentItem(it);
+  });
+  es.addEventListener('hello', ev => {
+    // 服务可能重启过，序号会从头开始；此时把游标退回去，否则会一直收不到新消息
+    try {
+      const h = JSON.parse(ev.data || '{}');
+      if (typeof h.seq === 'number' && h.seq < S.session.since) S.session.since = h.seq;
+    } catch (e) {}
+    S.session.connected = true;
+    renderAiStatus();
+  });
+  es.onopen = () => { S.session.connected = true; renderAiStatus(); };
+  es.onerror = () => { S.session.connected = false; renderAiStatus(); };
+  S.session.es = es;
+  S.session.connected = true;
+  renderAiStatus();
+  reportSession();
+}
+
+/** 处理 agent 推来的一条消息：文本 / 改动提案 / 界面指令可以同时存在 */
+function handleAgentItem(it) {
+  if ((it.text || '').trim()) {
+    S.ai.messages.push({ role: 'assistant', content: it.text });
+  }
+  for (const c of (it.commands || [])) {
+    try { execSessionCommand(c.cmd, c.args || {}); } catch (e) {}
+  }
+  if (it.patch && it.patch.ops && it.patch.ops.length) {
+    const prop = { id: uid('pp'), summary: it.patch.summary || '（agent 改动）', ops: it.patch.ops, fromAgent: true };
+    prop.textOnly = prop.ops.every(isTextOp);
+    S.ai.pending = S.ai.pending || [];
+    S.ai.pending.push(prop);
+    const auto = S.ai.autoMode === 'all' || (prop.textOnly && S.ai.autoMode === 'text');
+    if (auto) applyProposal(prop.id);
+    else toast('agent 提交了一批改动，等待你确认', 'warn', 4200);
+  }
+  renderChat();
+  renderAiStatus();
+}
+
+/** agent 可以驱动界面：选中、定位、切视图、打开剧情、重载等 */
+function execSessionCommand(cmd, args) {
+  if (cmd === 'select') {
+    if (!args.type || !args.id) return;
+    select(args.type, args.id);
+    if (args.center) { const e = eventById(args.id); if (e) centerOn(e); }
+  } else if (cmd === 'center') {
+    const e = eventById(args.id); if (e) { select('event', e.id); centerOn(e); }
+  } else if (cmd === 'focusEntity') {
+    setView(args.kind === 'place' ? 'place' : 'character');
+    S.focusId = args.id || '';
+    fitView();
+    renderAll();
+  } else if (cmd === 'view') {
+    setView(['timeline', 'character', 'place'].indexOf(args.mode) >= 0 ? args.mode : 'timeline');
+  } else if (cmd === 'scene') {
+    if (eventById(args.id)) openSceneEditor(args.id);
+  } else if (cmd === 'fit') {
+    fitView();
+  } else if (cmd === 'reload') {
+    if (IO.mode === 'server') applyExternal();
+  } else if (cmd === 'undo') {
+    undo();
+  } else if (cmd === 'redo') {
+    redo();
+  } else if (cmd === 'toast') {
+    toast(args.text || '', args.kind || '');
+  }
+}
+
+/* ============================================================================
+   20 · 顶栏与启动
+   ========================================================================== */
+function setView(mode) {
+  S.viewMode = mode;
+  if (mode === 'timeline') S.focusId = '';
+  $$('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.view === mode));
+  renderAll();
+}
+function wireTopbar() {
+  $('#projName').addEventListener('input', e => { P.meta.name = e.target.value; markDirty(); });
+  $('#projName').addEventListener('click', openProjects);
+  $$('#viewSeg button').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+  $('#btnUndo').addEventListener('click', undo);
+  $('#btnRedo').addEventListener('click', redo);
+  $('#btnFit').addEventListener('click', fitView);
+  $('#btnFit2').addEventListener('click', fitView);
+  $('#btnZoomIn').addEventListener('click', () => { const r = $('#canvasWrap').getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.2); });
+  $('#btnZoomOut').addEventListener('click', () => { const r = $('#canvasWrap').getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.2); });
+  $('#btnAddEvent').addEventListener('click', () => {
+    const box = $('#canvasWrap').getBoundingClientRect();
+    const w = screenToWorld(box.left + box.width / 2, box.top + box.height / 2);
+    createEventAt(w.x, w.y);
+  });
+  $('#btnAddAxis').addEventListener('click', addAxis);
+  $('#btnLinkMode').addEventListener('click', () => {
+    S.linkMode = !S.linkMode; S.linkAnchor = '';
+    $('#btnLinkMode').classList.toggle('on', S.linkMode);
+    $('#cvHint').textContent = S.linkMode ? '引用线模式：依次点击两个事件即可连接（再次点击按钮退出）'
+      : '双击空白处新建事件 · 拖拽空白处平移 · 滚轮缩放';
+    renderCanvas();
+  });
+  $('#btnAxes').addEventListener('click', () => {
+    const anyHidden = P.axes.some(a => !a.visible);
+    pushUndo();
+    P.axes.forEach(a => a.visible = anyHidden);
+    markDirty(); renderAll();
+  });
+  $('#btnHelp').addEventListener('click', openHelp);
+  $('#btnSample').addEventListener('click', () => {
+    if (!confirmBox('载入示例工程会替换当前内容，确定继续？（建议先导出备份）')) return;
+    pushUndo();
+    P = normalize(sampleProject());
+    if (IO.mode === 'server' && IO.file) { P.meta.name = IO.file.replace(/\.json$/i, ''); }
+    else IO.file = IO.file || '示例.json';
+    afterLoad(); markDirty();
+    toast('已载入示例工程', 'ok');
+  });
+  $('#btnExport').addEventListener('click', () => {
+    const name = (P.meta.name || '工程').replace(/[\\/:*?"<>|]/g, '_');
+    downloadJSON(name + '.json', P);
+    toast('已导出 ' + name + '.json', 'ok');
+  });
+  $('#btnImport').addEventListener('click', () => pickLocalFile('.json,application/json', file => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        pushUndo();
+        P = normalize(JSON.parse(reader.result));
+        if (IO.mode === 'server') IO.file = '';
+        afterLoad();
+        toast('已载入 ' + file.name, 'ok');
+        if (IO.mode !== 'server') setSavePill('warn', '本地草稿（未连接服务）');
+      } catch (e) { toast('文件格式错误：' + e.message, 'err'); }
+    };
+    reader.readAsText(file, 'utf-8');
+  }));
+  $('#aiHead').addEventListener('click', e => {
+    if (e.target.closest('.tb-btn')) return;
+    const d = $('#aiDrawer');
+    const closed = d.classList.toggle('closed');
+    S.ai.open = !closed;
+    $('#aiCaret').textContent = closed ? '▶' : '▼';
+    if (!closed) setTimeout(renderChat, 30);
+  });
+  $('#btnAiConfig').addEventListener('click', e => { e.stopPropagation(); openAiConfig(); });
+  $('#btnAiClear').addEventListener('click', e => {
+    e.stopPropagation();
+    S.ai.messages = []; S.ai.api = []; S.ai.pending = []; S.ai.applied = [];
+    renderChat(); toast('对话已清空');
+  });
+
+  // 拖拽 JSON 到窗口
+  let dragDepth = 0;
+  window.addEventListener('dragenter', e => { if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')) { dragDepth++; $('#dropMask').classList.remove('hide'); } });
+  window.addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; $('#dropMask').classList.add('hide'); } });
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => {
+    e.preventDefault(); dragDepth = 0; $('#dropMask').classList.add('hide');
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        pushUndo(); P = normalize(JSON.parse(reader.result));
+        if (IO.mode === 'server') { IO.file = f.name; }
+        afterLoad(); markDirty();
+        toast('已载入 ' + f.name, 'ok');
+      } catch (err) { toast('文件格式错误：' + err.message, 'err'); }
+    };
+    reader.readAsText(f, 'utf-8');
+  });
+  $('#conflictText').textContent = '工程文件已被外部修改';
+  $('#btnConflictTake').addEventListener('click', () => { $('#conflictBar').classList.add('hide'); applyExternal(); });
+  $('#btnConflictKeep').addEventListener('click', () => { $('#conflictBar').classList.add('hide'); saveToServer(); });
+}
+
+async function boot() {
+  if (window.__plotStudioBooted) return;   // 幂等：避免被重复加载时产生两套监听与两条文件监听
+  window.__plotStudioBooted = true;
+  initArrowDefs();
+  initCanvasInteractions();
+  initKeyboard();
+  wireTopbar();
+  renderAiChrome();
+
+  try {
+    const saved = JSON.parse(localStorage.getItem('plotstudio.ai') || '{}');
+    if (saved.baseURL) AICFG.baseURL = saved.baseURL;
+    if (saved.model) AICFG.model = saved.model;
+    if (saved.autoMode) S.ai.autoMode = saved.autoMode;
+  } catch (e) {}
+  if (!S.ai.autoMode) S.ai.autoMode = 'text';
+
+  const ok = await probeServer();
+  if (ok) {
+    IO.mode = 'server';
+    let cfg = {};
+    try { cfg = await (await fetch('/api/config')).json(); } catch (e) {}
+    AICFG.baseURL = cfg.baseURL || AICFG.baseURL;
+    AICFG.model = cfg.model || AICFG.model;
+    AICFG.hasKey = !!cfg.hasKey; AICFG.keyTail = cfg.keyTail || '';
+
+    let list = { projects: [] };
+    try { list = await (await fetch('/api/list')).json(); } catch (e) {}
+    let file = localStorage.getItem('plotstudio.lastFile');
+    if (!file || !(list.projects || []).some(p => p.file === file)) file = (list.projects[0] || {}).file || '';
+    if (file) {
+      try { await loadFromServer(file); toast('已打开工程 ' + file, 'ok', 2000); }
+      catch (e) { P = normalize(sampleProject()); IO.file = '默认工程.json'; afterLoad(); await saveToServer(); }
+    } else {
+      P = normalize(sampleProject());
+      IO.file = '默认工程.json';
+      afterLoad();
+      await saveToServer();
+    }
+    localStorage.setItem('plotstudio.lastFile', IO.file);
+    watchFile();
+    setSavePill('ok', '已连接本地服务');
+  } else {
+    IO.mode = 'offline';
+    setSavePill('warn', '未连接本地服务');
+    let P0 = null;
+    try { const b = localStorage.getItem('plotstudio.backup'); if (b) P0 = JSON.parse(b); } catch (e) {}
+    P = normalize(P0 || sampleProject());
+    afterLoad();
+    toast('未检测到本地服务，已进入受限模式：编辑与存档可用（导出 JSON / 浏览器草稿），AI 走浏览器直连。双击「启动.bat」可开启完整模式。', 'warn', 8000);
+  }
+  // 相机优先沿用工程里保存的视图；只有在没有事件时才自动适应，避免每次打开都被缩成一片小点
+  if (!P.events.length) fitView();
+  else { applyTransform(); }
+
+  // 会话模式：URL 参数 ?agent=1 / ?agent=0 优先，其次沿用本地记忆
+  let sm = null;
+  try { sm = new URLSearchParams(location.search).get('agent'); } catch (e) {}
+  let mode = sm === '1' || sm === 'true' ? 'agent' : (sm === '0' ? 'direct' : null);
+  if (!mode) { try { mode = localStorage.getItem('plotstudio.sessionMode'); } catch (e) {} }
+  S.session.mode = mode === 'agent' ? 'agent' : 'direct';
+  if (S.session.mode === 'agent' && IO.mode === 'server') {
+    await startSessionStream();
+    pollSessionStatus();
+  }
+  setInterval(() => {
+    if (S.session.mode !== 'agent') return;
+    reportSession();
+    pollSessionStatus();
+  }, 10000);
+
+  renderAll();
+  updateHistoryButtons();
+}
+
+boot();
+</script>
+</body>
+</html>
