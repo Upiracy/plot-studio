@@ -586,6 +586,78 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:inherit}
   border-radius:50%;animation:spin .7s linear infinite;display:inline-block;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ==========================================================================
+   8. 灵感板（ADR-0007）
+   ========================================================================== */
+/* 灵感视图不是时间线的投影，它是一块独立的卡片墙，直接盖在画布上 */
+.canvas-wrap.idea-mode > #grid,
+.canvas-wrap.idea-mode > #world,
+.canvas-wrap.idea-mode > #chipLayer,
+.canvas-wrap.idea-mode > .cv-overlay,
+.canvas-wrap.idea-mode > .canvas-empty{display:none}
+.idea-board{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg-canvas);z-index:5}
+.idea-board.hide{display:none}
+.ib-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+.ib-quick{
+  flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+  color:var(--text);font-family:inherit;font-size:12.5px;padding:7px 11px;outline:none;
+}
+.ib-quick:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.ib-sel{
+  background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);
+  color:var(--text);font-family:inherit;font-size:12px;padding:7px 8px;outline:none;
+}
+.ib-filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line-soft)}
+.ib-chip{
+  border:1px solid var(--line);background:var(--panel-2);color:var(--text-dim);
+  border-radius:999px;padding:3px 10px;font-size:11px;cursor:pointer;user-select:none;font-family:inherit;
+}
+.ib-chip:hover{color:var(--text);border-color:var(--text-faint)}
+.ib-chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.ib-count{margin-left:auto;color:var(--text-faint);font-size:11px}
+.ib-selbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--accent-soft);border-bottom:1px solid var(--line)}
+.ib-scroll{flex:1;overflow-y:auto;padding:12px}
+.ib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:10px;align-items:start}
+.ib-card{
+  position:relative;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:10px 11px 9px;cursor:pointer;transition:border-color .12s,transform .12s;
+}
+.ib-card:hover{border-color:var(--text-faint);transform:translateY(-1px)}
+.ib-card.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.ib-card.merged{opacity:.45}
+.ib-card.used{border-left:3px solid var(--ok)}
+.ib-card .ibc-top{display:flex;align-items:flex-start;gap:6px;margin-bottom:5px}
+.ib-card .ibc-title{flex:1;font-weight:600;font-size:12.5px;line-height:1.35;word-break:break-word}
+.ib-card .ibc-text{
+  color:var(--text-dim);font-size:11.5px;line-height:1.55;white-space:pre-wrap;
+  word-break:break-word;max-height:150px;overflow:hidden;
+}
+.ib-card .ibc-foot{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:8px}
+.ib-badge{font-size:10px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--text-faint);white-space:nowrap}
+.ib-badge.k{background:rgba(91,157,255,.12);border-color:rgba(91,157,255,.3);color:#9dc0ff}
+.ib-badge.s-used{background:rgba(63,185,80,.12);border-color:rgba(63,185,80,.35);color:#7ee08d}
+.ib-badge.s-parked{background:rgba(227,162,60,.12);border-color:rgba(227,162,60,.35);color:#e3a23c}
+.ib-badge.s-merged{background:rgba(176,124,255,.12);border-color:rgba(176,124,255,.35);color:#c9a6ff}
+.ib-badge.tag{font-family:var(--mono)}
+.ib-card .ibc-mark{
+  position:absolute;top:-7px;right:-7px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;
+  background:var(--ok);color:#06170a;font-size:9.5px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+}
+.ib-empty{color:var(--text-faint);font-size:12px;text-align:center;padding:52px 24px;line-height:2}
+.ib-pick{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--radius-sm);cursor:pointer}
+.ib-pick:hover{background:var(--panel-2)}
+.ib-pick .t{flex:1;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ib-pick .d{color:var(--text-faint);font-size:11px;flex:0 0 auto}
+.ib-facet-item{
+  display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:var(--radius-sm);
+  cursor:pointer;font-size:12px;color:var(--text-dim);user-select:none;
+}
+.ib-facet-item:hover{background:var(--panel-2);color:var(--text)}
+.ib-facet-item.on{background:var(--accent-soft);color:var(--accent)}
+.ib-facet-item .n{margin-left:auto;color:var(--text-faint);font-size:10.5px;font-family:var(--mono)}
+.ib-origin{color:var(--text-faint);font-size:10.5px;line-height:1.7;margin-top:6px}
 </style>
 </head>
 <body>
@@ -602,6 +674,7 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:inherit}
       <button data-view="timeline" class="on">时间线</button>
       <button data-view="character">角色</button>
       <button data-view="place">地点</button>
+      <button data-view="ideas">灵感</button>
     </div>
 
     <div class="tb-sep"></div>
@@ -664,6 +737,19 @@ input,textarea,select{font-family:inherit;font-size:inherit;color:inherit}
     <div class="canvas-empty" id="canvasEmpty">
       <h3>画布是空的</h3>
       <p>双击空白处创建第一个事件，或点击左上角「+ 轴」先定义一条时间逻辑。</p>
+    </div>
+
+    <!-- 灵感板：独立于画布的卡片墙，不是时间线的投影（ADR-0007） -->
+    <div class="idea-board hide" id="ideaBoard">
+      <div class="ib-head">
+        <input class="ib-quick" id="ibQuick" placeholder="随手记一条灵感，回车即存…（留空则新建一条空灵感去右侧编辑）" spellcheck="false">
+        <select class="ib-sel" id="ibKindSel"></select>
+        <button class="btn primary sm" id="ibAdd">添加</button>
+        <input class="ib-sel" id="ibSearch" placeholder="筛选…" spellcheck="false" style="width:150px">
+      </div>
+      <div class="ib-filters" id="ibFilters"></div>
+      <div class="ib-selbar hide" id="ibSelBar"></div>
+      <div class="ib-scroll" id="ibScroll"></div>
     </div>
   </main>
 
@@ -756,6 +842,23 @@ const REQ_TYPES = {
 
 const AXIS_PALETTE = ['#4a9eff', '#e0a13a', '#b07cff', '#3fb9a0', '#f06060', '#7ee08d', '#e07ab0', '#6fd8ff'];
 
+/* 灵感（ADR-0007）：尚未组织进故事的零散想法。独立集合，不落在画布上、不占逻辑时间、不属于任何轴。 */
+const IDEA_KINDS = {
+  meme:  { name: '梗' },
+  scene: { name: '桥段' },
+  line:  { name: '台词' },
+  twist: { name: '转折' },
+  lore:  { name: '设定' },
+  note:  { name: '杂记' }
+};
+const IDEA_KIND_ORDER = ['meme', 'scene', 'line', 'twist', 'lore', 'note'];
+const IDEA_STATUS = {
+  raw:    { name: '未采用' },
+  used:   { name: '已采用' },
+  parked: { name: '搁置' },
+  merged: { name: '已合并' }
+};
+
 /* ============================================================================
    1 · 工具
    ========================================================================== */
@@ -838,7 +941,7 @@ function newProject(name) {
       brief: '这条轴跟踪故事的主干推进。',
       chapters: [{ id: uid('ch'), title: '第一章', brief: '', start: 0, end: 1000, children: [] }]
     }],
-    events: [], edges: [], links: [],
+    events: [], edges: [], links: [], ideas: [],
     view: { camera: { x: 60, y: 120, zoom: 1 }, hiddenAxes: [] }
   };
 }
@@ -942,6 +1045,27 @@ function normalize(p) {
       state: type === 'foreshadow' ? (g.state === 'closed' ? 'closed' : 'open') : ''
     };
   });
+  /* 灵感（ADR-0007）：独立集合。text 是原文，永不被改写；扩写与改写只追加到 expansion / variants；
+     合并是软合并——被合并的条目保留在库里，只标记去向，因此可追溯也可反悔。 */
+  p.ideas = (p.ideas || []).map(i => ({
+    id: i.id || uid('id'),
+    text: i.text || '',
+    title: i.title || '',
+    kind: IDEA_KINDS[i.kind] ? i.kind : 'note',
+    tags: i.tags || [],
+    characterIds: (i.characterIds || []).filter(Boolean),
+    placeIds: (i.placeIds || []).filter(Boolean),
+    status: IDEA_STATUS[i.status] ? i.status : 'raw',
+    usedBy: (i.usedBy || []).filter(u => u && u.type).map(u => ({
+      type: u.type, id: u.id || '', eventId: u.eventId || '', label: u.label || ''
+    })),
+    mergedInto: i.mergedInto || '',
+    mergedFrom: (i.mergedFrom || []).filter(Boolean),
+    expansion: i.expansion || '',
+    variants: (i.variants || []).map(v => ({ id: v.id || uid('vr'), text: v.text || '', label: v.label || '' })),
+    createdAt: i.createdAt || '',
+    updatedAt: i.updatedAt || ''
+  }));
   p.view = Object.assign({ camera: { x: 60, y: 120, zoom: 1 }, hiddenAxes: [] }, p.view || {});
   if (!p.view.camera) p.view.camera = { x: 60, y: 120, zoom: 1 };
   return p;
@@ -953,6 +1077,18 @@ const eventById = id => byId(P.events, id);
 const axisById  = id => byId(P.axes, id);
 const charById  = id => byId(P.characters, id);
 const placeById = id => byId(P.places, id);
+const ideaById  = id => byId(P.ideas, id);
+
+/** 灵感的显示名：优先短标题，否则取原文首行 */
+function ideaTitle(i) {
+  if (!i) return '';
+  const t = (i.title || '').trim();
+  if (t) return t;
+  const first = (i.text || '').split('\n').map(s => s.trim()).filter(Boolean)[0] || '';
+  return first.slice(0, 46) || '（空灵感）';
+}
+/** 合并后的条目留在库里但不再主动露面（ADR-0007：软合并） */
+function ideaVisible(i) { return !!i && i.status !== 'merged'; }
 
 function axisRange(axis) {
   const cs = axis.chapters;
@@ -995,6 +1131,7 @@ const S = {
   camera: { x: 60, y: 120, zoom: 1 },
   session: { mode: 'direct', since: 0, es: null, connected: false },
   search: '', kindFilter: 'all', trigFilter: 'all',
+  ideaFilter: { q: '', status: 'all', kind: 'all' },
   multi: new Set(),
   ai: { open: false, busy: false, messages: [], scope: 'neighbor', draft: null, autoApplied: [] }
 };
@@ -1039,9 +1176,12 @@ function resolveSelection() {
   return true;
 }
 function select(type, id) {
+  // 选中灵感时顺带切到灵感视图，否则选中了也看不见它（agent 的 select 指令也走这条路）
+  if (type === 'idea' && S.viewMode !== 'ideas') setView('ideas');
   if (type) S.selection = { type, id };
   else S.selection = null;
-  renderInspector(); renderLeft(); renderCanvas(); renderAiStatus();
+  if (S.viewMode === 'ideas') renderIdeasBoard(); else renderCanvas();
+  renderInspector(); renderLeft(); renderAiStatus();
   reportSession();
 }
 
@@ -1237,6 +1377,12 @@ function renderAll() {
   renderProjMeta();
   renderLeft();
   renderInspector();
+  if (S.viewMode === 'ideas') {
+    // 灵感板与画布互斥，进灵感视图时不必再渲染节点
+    renderIdeasBoard();
+    renderAiStatus();
+    return;
+  }
   renderAxisLayer();
   renderCanvas();
   renderAiStatus();
@@ -1888,16 +2034,27 @@ function initKeyboard() {
     const stp = e.shiftKey ? 10 : 1;
     const ARROWS = { ArrowLeft: [-stp, 0], ArrowRight: [stp, 0], ArrowUp: [0, -stp], ArrowDown: [0, stp] };
     if (ARROWS[e.key] && (S.selection || S.multi.size)) {
+      // 灵感没有空间位置，方向键与它无关（多选里装的是灵感 id，微调会白跑一趟）
+      if (S.viewMode === 'ideas') return;
       e.preventDefault();
       nudgeSelection(ARROWS[e.key][0], ARROWS[e.key][1]);
       return;
     }
     if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelection(); return; }
-    if (e.key === 'f' || e.key === 'F') { fitView(); return; }
+    if (e.key === 'f' || e.key === 'F') {
+      if (S.viewMode === 'ideas') return;
+      fitView(); return;
+    }
     if (e.key === 'a' && e.ctrlKey) {
       e.preventDefault();
-      S.multi = new Set(P.events.map(x => x.id));
-      renderCanvas(); renderLeft(); renderInspector();
+      if (S.viewMode === 'ideas') {
+        // 全选"当前筛选出来的"灵感，方便一次性合并
+        S.multi = new Set(filteredIdeas().map(x => x.id));
+        renderIdeasBoard(); renderInspector();
+      } else {
+        S.multi = new Set(P.events.map(x => x.id));
+        renderCanvas(); renderLeft(); renderInspector();
+      }
       return;
     }
     if (e.key === 'Escape') {
@@ -1935,6 +2092,8 @@ function nudgeSelection(dt, dy) {
 }
 
 function deleteSelection() {
+  // 灵感视图下删除的是灵感，与事件无关，走单独一条路
+  if (S.viewMode === 'ideas') return deleteIdeas();
   // 加选模式下批量删除
   if (S.multi.size) {
     const n = S.multi.size;
@@ -2046,6 +2205,8 @@ function renderLeft() {
   const keepId = act && host.contains(act) && act.id ? act.id : '';
   const caret = keepId && typeof act.selectionStart === 'number' ? act.selectionStart : 0;
   host.innerHTML = '';
+
+  if (S.viewMode === 'ideas') { renderIdeaLeft(host); return; }
 
   if (S.viewMode !== 'timeline') {
     const focus = computeFocus();
@@ -2326,6 +2487,12 @@ function chipList(kind, values, allFn, nameFn, placeholder) {
 function renderInspector() {
   const host = $('#inspector');
   const s = S.selection;
+  // 灵感视图自成一套：多选时是合并面板，单选时是灵感编辑器
+  if (S.viewMode === 'ideas') {
+    if (S.multi.size > 1) return inspIdeaBatch(host);
+    if (!s || s.type !== 'idea') return inspIdeaEmpty(host);
+    return inspIdea(host, ideaById(s.id) || missing(host));
+  }
   if (S.multi.size > 1) return inspBatch(host);
   if (!s) {
     host.innerHTML = '<div class="insp-empty">' +
@@ -2394,7 +2561,11 @@ function wireInspector(scope) {
     });
   });
 }
-function commit() { markDirty(); renderLeft(); renderCanvas(); renderInspector(); }
+function commit() {
+  markDirty(); renderLeft();
+  if (S.viewMode === 'ideas') renderIdeasBoard(); else renderCanvas();
+  renderInspector();
+}
 
 /* 当前检查器作用域。用独立变量而不是往数据对象上挂标记，避免污染导出的 JSON */
 let INSP = { kind: '', obj: null };
@@ -2415,6 +2586,9 @@ function applySet(obj, prop, v) {
     } else {
       renderCanvas();
     }
+  } else if (kind === 'idea') {
+    obj.updatedAt = nowLabel();
+    renderIdeasBoard();
   } else if (kind === 'axis' || kind === 'chapter' || kind === 'character' || kind === 'place') {
     renderCanvas();
   }
@@ -2852,6 +3026,15 @@ function inspLink(host, g) {
 /* ---- 动作分发 ---- */
 function doAct(act, scope, node) {
   if (act === 'del') { deleteSelection(); return; }
+  /* ---- 灵感相关动作 ---- */
+  if (act === 'idea-to-event') { ideaAdoptAsEvent(scope.id); return; }
+  if (act === 'idea-to-step') { ideaAttach(scope.id, 'step'); return; }
+  if (act === 'idea-to-brief') { ideaAttach(scope.id, 'brief'); return; }
+  if (act === 'idea-del' || act === 'idea-del-selected') { deleteIdeas(); return; }
+  if (act === 'idea-unmerge') { ideaUnmerge(scope.id); return; }
+  if (act === 'idea-merge') { ideaMerge(Array.from(S.multi)); return; }
+  if (act === 'idea-sel-clear') { S.multi.clear(); renderAll(); return; }
+  if (act.indexOf('idea-status:') === 0) { ideaSetStatus(scope.id, act.split(':')[1]); return; }
   if (act === 'open-scene') { openSceneEditor(scope.id); return; }
   if (act === 'dup-event') {
     pushUndo();
@@ -3069,7 +3252,12 @@ function openHelp() {
           '<b>分支</b>：在右侧为依赖指定触发选项，即成为"只有选了某个选项才成立"的分支。<br>' +
           '<b>额外门槛</b>：依赖上可以再加条件（标记 / 物品 / 属性 / 自定义）。门槛是给人看和给 AI 读的约束说明，不会自动推导，画布上会显示为 ⛓ 标注。<br><br>' +
           '<b>引用线</b>：紫色虚线，非强依赖的叙事关联（做过某事件会让此事件走向不同）。只作跳转与提示，不构成解锁条件。<br>' +
-          '<b>伏笔</b>：引用线的一种。带<em>回收状态</em>，未回收的会显示成暖色密虚线、在事件卡片左上角挂「伏」标记、并计入左栏的<em>悬空伏笔</em>列表；在右侧把状态改成「已回收」即消失。' +
+          '<b>伏笔</b>：引用线的一种。带<em>回收状态</em>，未回收的会显示成暖色密虚线、在事件卡片左上角挂「伏」标记、并计入左栏的<em>悬空伏笔</em>列表；在右侧把状态改成「已回收」即消失。<br><br>' +
+          '<b>灵感</b>：尚未组织进故事的零散想法（梗 / 桥段 / 台词 / 转折 / 设定）。它不落在画布上、不占逻辑时间、不属于任何轴，' +
+          '存在顶栏第四个入口「<em>灵感</em>」里——中间是卡片墙，随手在顶部输入框写一句、回车即存。<br>' +
+          '需要用的时候：选中一条，在右侧把它<em>转为事件</em>或<em>挂到已有事件</em>上；几条零散的想法若其实是一件事，' +
+          '<span class="kbd">Shift/Ctrl+点击</span> 多选后<em>合并为一条</em>。合并是软合并：原文一条都不会丢，随时可以从右侧「拆出」。<br>' +
+          '在 AI 面板点「扫描灵感库找机会」，可以让 AI 通读整个库，告诉你哪条适合放进哪里、哪些可以合到一起。' +
         '</div>' +
         '<div class="ai-sec-title">操作</div>' +
         '<div class="hint-box">' +
@@ -3322,6 +3510,29 @@ function sampleProject() {
     { id: 'lk_1', from: 'ev_6', to: 'ev_3', type: 'influence', label: '先知道名字', note: '如果先看过剪报，对峙时林·凡会直接叫出奎因的名字，走向另一段对白。' },
     { id: 'lk_2', from: 'ev_1', to: 'ev_5', type: 'foreshadow', label: '九号泊位的钩子', note: '第一章埋下，第五章回收。' }
   ];
+  /* 灵感库示例。故意包含一条"已合并"、一条"已采用"，让软合并与采用记录一眼可见 */
+  const mkIdea = (id, text, title, kind, tags, chars, places, status, extra) => Object.assign({
+    id, text, title, kind, tags: tags || [], characterIds: chars || [], placeIds: places || [],
+    status: status || 'raw', usedBy: [], mergedInto: '', mergedFrom: [], expansion: '', variants: [],
+    createdAt: '2026-10-02 10:00:00', updatedAt: '2026-10-02 10:00:00'
+  }, extra || {});
+  p.ideas = [
+    mkIdea('id_1', '雾里的钟声其实每十二分钟响一次，和呼吸的节奏一样。人在听见第三次之后会开始觉得困。',
+      '钟声的节奏', 'meme', ['雾', '声音'], ['ch_lin'], ['pl_pier']),
+    mkIdea('id_2', '奎因每次说谎前，会先摸一下灯塔的铜栏杆。他自己并没有意识到这个动作。',
+      '说谎的小动作', 'line', ['奎因'], ['ch_kui'], ['pl_tower']),
+    mkIdea('id_3', '可以给雾定一条规则：越靠近海，声音传得越近。海难那天，岸上的人全是哑的。',
+      '声音的边界', 'lore', ['世界观'], [], []),
+    mkIdea('id_4', '结局可以让林·凡点亮灯塔，但雾太浓，光只照到自己脚边——他救不了任何人，只是不再回避。',
+      '结局意象：灯与雾', 'twist', ['结局'], ['ch_lin'], ['pl_tower']),
+    mkIdea('id_5', '崖的斗笠边缘有一道被雨水冲淡的旧血痕。', '', 'meme', ['崖'], ['ch_ya'], [], 'merged',
+      { mergedInto: 'id_6' }),
+    mkIdea('id_6', '斗笠边缘有一道被雨水冲淡的旧血痕。\n\n— — —\n\n她说话时会下意识模仿姐姐的口头禅，自己却不知道。',
+      '崖身上的两处细节', 'meme', ['崖'], ['ch_ya'], [], 'raw', { mergedFrom: ['id_5'] }),
+    mkIdea('id_7', '三只锚的墙上钉着一排船票，每张背面都写着一个失踪者最后一次出现的地点。',
+      '船票墙', 'scene', ['酒馆'], [], ['pl_inn'], 'used',
+      { usedBy: [{ type: 'event', id: 'ev_6', eventId: 'ev_6', label: '老板的收藏' }] })
+  ];
   p.view.camera = { x: 80, y: 380, zoom: 0.8 };
   return p;
 }
@@ -3339,14 +3550,18 @@ const AI_TOOLS = [
   { type: 'function', function: { name: 'get_event', description: '读取单个事件的完整信息：属性、选项、剧情步骤、依赖与引用线。', parameters: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } } },
   { type: 'function', function: { name: 'list_timeline', description: '列出所有事件按逻辑时间排序的概览，以及每条轴的章节划分。', parameters: { type: 'object', properties: {} } } },
   { type: 'function', function: { name: 'list_graph', description: '列出全部依赖与引用线，用于查看因果结构。', parameters: { type: 'object', properties: {} } } },
+  { type: 'function', function: { name: 'list_ideas', description: '列出灵感库里的零散想法（尚未组织进故事的梗 / 桥段 / 台词 / 转折等）。可按状态、类型、关键词筛选。', parameters: { type: 'object', properties: { status: { type: 'string', enum: ['raw', 'used', 'parked', 'merged'] }, kind: { type: 'string', enum: ['meme', 'scene', 'line', 'twist', 'lore', 'note'] }, query: { type: 'string' } } } } },
+  { type: 'function', function: { name: 'get_idea', description: '读取单条灵感的完整信息：原文、扩写、改写变体、合并来源与去向、已被用在哪里。', parameters: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] } } },
   { type: 'function', function: { name: 'propose_patch', description: '提交一批改动建议。系统会按操作类型决定是自动写入还是等用户确认。这是唯一能修改工程的方式。', parameters: {
       type: 'object',
       properties: {
         summary: { type: 'string', description: '一句话说明这批改动做了什么' },
         ops: { type: 'array', description: '改动操作列表', items: { type: 'object', properties: {
-          op: { type: 'string', description: 'event.create | event.update | event.delete | edge.create | edge.update | edge.delete | link.create | link.update | link.delete | character.create | character.update | place.create | place.update | axis.update | chapter.update | world.update' },
+          op: { type: 'string', description: 'event.create | event.update | event.delete | edge.create | edge.update | edge.delete | link.create | link.update | link.delete | character.create | character.update | place.create | place.update | axis.update | chapter.update | world.update | idea.create | idea.update | idea.delete | idea.merge | idea.mark' },
           id: { type: 'string' }, patch: { type: 'object' }, data: { type: 'object' },
           from: { type: 'string' }, to: { type: 'string' }, viaChoiceId: { type: 'string' },
+          ids: { type: 'array', description: 'idea.merge 用：要合并的灵感 id 列表', items: { type: 'string' } },
+          status: { type: 'string', description: 'idea.mark 用：raw | used | parked' },
           requirements: { type: 'array', description: '依赖的额外门槛，元素形如 {type:"flag|item|stat|choice|custom", key:"…", value:"…"}', items: { type: 'object' } },
           type: { type: 'string', description: '引用线类型，或门槛类型' },
           state: { type: 'string', description: '伏笔回收状态：open（已埋设未回收，默认）| closed（已回收）' },
@@ -3368,15 +3583,50 @@ function aiSystemPrompt() {
     '- 引用线 link：{from,to,type,label,note,state}。type ∈ influence|echo|foreshadow|parallel|note，表示非强依赖的叙事关联。',
     '  其中 foreshadow 必须带 state：open（已埋设、尚未回收）或 closed（已回收）。埋设与回收分别用两条指向彼此的引用线表达，回收时把埋设那条改成 closed。',
     '- 剧情步骤 step：{id,type,fields}。type ∈ main(对白)/narr(旁白)/battle(战斗)/explore(探索)/check(检定)/move(移动)/reward(结算)/custom。',
+    '- 灵感 idea：{id,text,title,kind,status,tags,characterIds,placeIds,usedBy,mergedFrom,mergedInto,expansion,variants}。',
+    '  灵感是尚未组织进故事的零散想法，不落在时间线上、不属于任何轴，kind ∈ meme(梗)/scene(桥段)/line(台词)/twist(转折)/lore(设定)/note(杂记)。',
+    '  text 是原文，**永远不要改写或替换它**：要扩写就写进 expansion，要改写就追加 variants:[{id,text,label}]。',
+    '  采用一条灵感用 idea.mark 转 status（不要删除它）；合并多条用 idea.merge（被合并的条目会保留并标记去向）。',
     '',
     '工作方式：',
     '- 先检索再动手。涉及具体人物、地点、时间或既有事件时，先用工具把它们读出来，不要凭空编造与设定冲突的内容。',
     '- 保持设定一致性：角色性格、地点氛围、世界观规则以工程中的设定文本为准。',
     '- 补故事时优先制造因果与伏笔，而不是堆砌新地点新角色。能用 link 表达的影响关系就用 link，不要滥用依赖。',
     '- 新增事件要给出合理的 t 与 y，避免与既有节点重叠位置。',
+    '- 用户让你"把灵感用起来"时：先 list_ideas 通读灵感库，再对照 list_timeline / list_graph 找位置，逐条给出具体建议而不是泛泛而谈。',
+    '  如果发现多条灵感其实讲的是同一件事，明确指出可以合并的组合（用 idea.merge，或建议用户在灵感视图里多选后手动合并）。',
+    '- 扩写某条灵感前，先 get_idea 读它：若它由多条灵感合并而来，或库里还有同标签的其他灵感，把能融合的一并融进去，并在回复里说明你融合了哪几条、各自的取舍。',
     '- 修改完成后，用一段简短的中文说明你改了什么、为什么，以及留下了哪些伏笔。',
     '- 不要输出 JSON 代码块作为最终回答，改动一律通过 propose_patch 提交。'
   ].join('\n');
+}
+
+/** 按当前选中对象检索灵感库：选中事件时优先匹配它引用的角色 / 地点与标题关键词。
+    搁置与已合并的条目不再主动打扰，所以不进候选。 */
+function relatedIdeas(limit) {
+  const s = S.selection;
+  const ev = s && s.type === 'event' ? eventById(s.id) : null;
+  const chars = new Set(ev ? ev.characterIds : []);
+  const places = new Set(ev ? ev.placeIds : []);
+  const words = ev
+    ? (ev.title + ' ' + (ev.summary || '') + ' ' + (ev.tags || []).join(' '))
+        .split(/[\s,，、。·:：/]+/).filter(w => w.length >= 2)
+    : [];
+  const scored = [];
+  for (const i of P.ideas) {
+    if (i.status === 'merged' || i.status === 'parked') continue;
+    let sc = 0;
+    for (const c of (i.characterIds || [])) if (chars.has(c)) sc += 3;
+    for (const p of (i.placeIds || [])) if (places.has(p)) sc += 3;
+    if (words.length) {
+      const hay = i.title + ' ' + i.text + ' ' + (i.tags || []).join(' ');
+      for (const w of words) if (hay.indexOf(w) >= 0) sc += 1;
+    }
+    // 已经用过的不再重复推荐
+    if (sc > 0 && !(i.usedBy || []).length) scored.push({ i: i, sc: sc });
+  }
+  scored.sort((a, b) => b.sc - a.sc);
+  return scored.slice(0, limit || 6).map(x => x.i);
 }
 
 function buildContextPreview() {
@@ -3397,7 +3647,20 @@ function buildContextPreview() {
       for (const pid of ev.placeIds) { const pl = placeById(pid); if (pl) lines.push('【地点】' + pl.name + ' — ' + (pl.brief || '').slice(0, 80).replace(/\n/g, ' ')); }
     }
   }
-  if (S.ai.scope === 'global') lines.push('【范围】整个工程：' + P.events.length + ' 事件 / ' + P.characters.length + ' 角色 / ' + P.places.length + ' 地点');
+  if (s && s.type === 'idea') {
+    const it = ideaById(s.id);
+    if (it) {
+      lines.push('【选中灵感】' + ideaTitle(it) + '（' + IDEA_KINDS[it.kind].name + ' · ' + IDEA_STATUS[it.status].name + '）— ' +
+        (it.text || '').slice(0, 160).replace(/\n/g, ' '));
+      if ((it.mergedFrom || []).length) {
+        lines.push('【该灵感合并自】' + it.mergedFrom.map(x => ideaTitle(ideaById(x)) || x).join('、'));
+      }
+    }
+  }
+  // 相关灵感：按当前对象捞出的可复用想法，让 AI 有机会提醒用户"这里可以塞某某"
+  const rel = relatedIdeas(6);
+  if (rel.length) lines.push('【相关灵感】' + rel.map(i => ideaTitle(i) + '（' + IDEA_KINDS[i.kind].name + '）').join(' / '));
+  if (S.ai.scope === 'global') lines.push('【范围】整个工程：' + P.events.length + ' 事件 / ' + P.characters.length + ' 角色 / ' + P.places.length + ' 地点 / ' + P.ideas.length + ' 灵感');
   else if (S.ai.scope === 'chapter') lines.push('【范围】当前章节及其全部事件');
   else lines.push('【范围】当前选中对象的邻域（一跳）');
   return lines.join('\n');
@@ -3487,6 +3750,32 @@ const TOOL_IMPL = {
       label: l.label, note: l.note
     }))
   }),
+  list_ideas: a => {
+    const args = a || {};
+    const q = String(args.query || '').toLowerCase();
+    return P.ideas.filter(i =>
+      (!args.status || i.status === args.status) &&
+      (!args.kind || i.kind === args.kind) &&
+      (!q || (i.text + ' ' + i.title + ' ' + (i.tags || []).join(' ') + ' ' + i.expansion).toLowerCase().indexOf(q) >= 0)
+    ).map(i => ({
+      id: i.id, title: ideaTitle(i), kind: i.kind, status: i.status, tags: i.tags,
+      text: (i.text || '').slice(0, 300),
+      hasExpansion: !!i.expansion, variantCount: (i.variants || []).length,
+      mergedFrom: i.mergedFrom, mergedInto: i.mergedInto,
+      characters: (i.characterIds || []).map(x => (charById(x) || {}).name).filter(Boolean),
+      places: (i.placeIds || []).map(x => (placeById(x) || {}).name).filter(Boolean),
+      usedBy: i.usedBy
+    })).slice(0, 80);
+  },
+  get_idea: a => {
+    const i = ideaById(a.id);
+    if (!i) return { error: '未找到 ' + a.id };
+    return Object.assign({}, i, {
+      displayTitle: ideaTitle(i),
+      mergedFromTitles: (i.mergedFrom || []).map(x => ideaTitle(ideaById(x)) || x),
+      mergedIntoTitles: i.mergedInto ? [ideaTitle(ideaById(i.mergedInto)) || i.mergedInto] : []
+    });
+  },
   propose_patch: a => {
     const prop = { id: uid('pp'), summary: a.summary || '（无说明）', ops: a.ops || [] };
     prop.textOnly = prop.ops.every(isTextOp);
@@ -3508,10 +3797,13 @@ function normReqs(list) {
 
 /** 只有不改动图拓扑、且不新增删除实体的操作才算文本类（ADR-0005） */
 function isTextOp(op) {
-  const textOnly = { 'event.update': 1, 'character.update': 1, 'place.update': 1, 'axis.update': 1, 'chapter.update': 1, 'world.update': 1 };
+  const textOnly = { 'event.update': 1, 'character.update': 1, 'place.update': 1, 'axis.update': 1, 'chapter.update': 1, 'world.update': 1, 'idea.update': 1 };
   if (!textOnly[op.op]) return false;
   const p = op.patch || {};
   const structural = ['t', 'y', 'kind', 'trigger', 'placeIds', 'characterIds', 'choices', 'start', 'end', 'chapters', 'color', 'parentId', 'visible'];
+  // 灵感另有一组结构字段：原文、标题、状态、标签与合并关系都不算"纯文本"。
+  // 于是 idea.update 只有写 expansion / variants 时才自动落盘，其余改动都要用户确认。
+  if (op.op === 'idea.update') structural.push('text', 'title', 'status', 'tags', 'mergedFrom', 'mergedInto');
   return !structural.some(k => k in p);
 }
 
@@ -3571,6 +3863,21 @@ function diffLines(prop) {
       out.push({ cls: 'diff-add', t: '+ 新增' + (op.op.indexOf('character') === 0 ? '角色' : '地点') + '「' + ((op.data && op.data.name) || '') + '」' });
     } else if (op.op === 'character.update' || op.op === 'place.update' || op.op === 'axis.update' || op.op === 'chapter.update' || op.op === 'world.update') {
       for (const k in (op.patch || {})) out.push({ cls: 'diff-add', t: '+ ' + op.op + ' · ' + k + ' = ' + JSON.stringify(op.patch[k]).slice(0, 140) });
+    } else if (op.op === 'idea.create') {
+      out.push({ cls: 'diff-add', t: '+ 新增灵感「' + ideaTitle(op.data || {}) + '」' });
+    } else if (op.op === 'idea.update') {
+      const i0 = ideaById(op.id);
+      for (const k in (op.patch || {})) {
+        out.push({ cls: 'diff-add', t: '+ 灵感「' + (i0 ? ideaTitle(i0) : op.id) + '」· ' + k + ' = ' + JSON.stringify(op.patch[k]).slice(0, 140) });
+      }
+    } else if (op.op === 'idea.delete') {
+      const i0 = ideaById(op.id);
+      out.push({ cls: 'diff-del', t: '- 删除灵感「' + (i0 ? ideaTitle(i0) : op.id) + '」' });
+    } else if (op.op === 'idea.merge') {
+      out.push({ cls: 'diff-add', t: '+ 合并 ' + ((op.ids || []).length) + ' 条灵感为一条（来源保留在库里）' });
+    } else if (op.op === 'idea.mark') {
+      const i0 = ideaById(op.id);
+      out.push({ cls: 'diff-add', t: '+ 灵感「' + (i0 ? ideaTitle(i0) : op.id) + '」标记为 ' + ((IDEA_STATUS[op.status] || {}).name || op.status || '') });
     } else {
       out.push({ cls: 'diff-ctx', t: '  ' + op.op });
     }
@@ -3634,6 +3941,32 @@ function applyProposal(pid) {
         P.places.push(c); created.push(c.id);
       } else if (op.op === 'place.update') {
         const c = placeById(op.id); if (c) Object.assign(c, op.patch || {});
+      } else if (op.op === 'idea.create') {
+        const data = Object.assign({}, op.data || {});
+        const it = newIdea(data);
+        if (data.id && !ideaById(data.id)) it.id = data.id;
+        P.ideas.push(it); created.push(it.id);
+      } else if (op.op === 'idea.update') {
+        const it = ideaById(op.id);
+        if (it) { Object.assign(it, op.patch || {}); it.updatedAt = nowLabel(); }
+      } else if (op.op === 'idea.delete') {
+        P.ideas = P.ideas.filter(x => x.id !== op.id);
+        // 清掉指向被删条目的软合并指针与采用记录，避免留下悬空引用
+        P.ideas.forEach(x => {
+          if (x.mergedInto === op.id) x.mergedInto = '';
+          x.mergedFrom = (x.mergedFrom || []).filter(y => y !== op.id);
+          x.usedBy = (x.usedBy || []).filter(u => u.id !== op.id);
+        });
+      } else if (op.op === 'idea.merge') {
+        const ids = (op.ids || []).filter(id => { const i = ideaById(id); return i && i.status !== 'merged'; });
+        if (ids.length >= 2) mergeIdeasCore(ids, op.data || {});
+      } else if (op.op === 'idea.mark') {
+        const it = ideaById(op.id);
+        if (it) {
+          if (IDEA_STATUS[op.status]) it.status = op.status;
+          if (op.usedBy) it.usedBy = op.usedBy;
+          it.updatedAt = nowLabel();
+        }
       } else if (op.op === 'axis.update') {
         const x = axisById(op.id); if (x) Object.assign(x, op.patch || {});
       } else if (op.op === 'chapter.update') {
@@ -3683,7 +4016,8 @@ async function runAgent(userText) {
   try {
     for (let round = 0; round < 8; round++) {
       const body = {
-        messages: [{ role: 'system', content: aiSystemPrompt() }].concat(S.ai.api.slice(-40)),
+        // 左栏那个「将自动装入」的预览必须真的装进去，否则选中对象与相关灵感都白列了
+        messages: [{ role: 'system', content: aiSystemPrompt() + '\n\n当前上下文：\n' + buildContextPreview() }].concat(S.ai.api.slice(-40)),
         tools: AI_TOOLS,
         tool_choice: 'auto',
         temperature: 0.8
@@ -3730,7 +4064,9 @@ function quickPrompt(kind) {
     foreshadow: '请检查整个工程的依赖与引用线，找出可以埋设伏笔的位置，并用引用线（type=foreshadow）把它们连起来。至少给出 2 组埋设与回收。',
     link: '请找出当前工程中断裂或缺失的因果关联，用引用线补上，并说明每条引用线的叙事理由。',
     chapter: '请读一遍当前轴的章节划分与各章节设定，指出哪些章节缺少明确的框定或目标，并给出改写后的章节设定文本。',
-    detail: '请为' + target + '补全剧情细节（场景步骤），要求步骤类型多样、信息具体，能直接交给编剧落地。'
+    detail: '请为' + target + '补全剧情细节（场景步骤），要求步骤类型多样、信息具体，能直接交给编剧落地。',
+    ideas: '请把灵感库里还没用上的想法用起来。先用 list_ideas 读全部灵感（未采用与搁置的都要看），再对照 list_timeline、list_graph 与各章节的设定文本，逐条判断最适合落地的位置：具体该放进哪个事件、哪一章，或朝什么方向扩写。如果发现多条灵感其实讲的是同一件事，明确指出可以合并的组合（用 idea.merge 提交，或建议我在灵感视图里多选后手动合并）。确实暂时用不上的，直接说明理由，不要硬塞。最后挑 2 到 3 条最值得先做的，落成具体改动。',
+    ideaexpand: '请扩写当前选中的这条灵感。先 get_idea 读它：如果它是由多条灵感合并来的，或库里还有同标签的其他灵感，把能融合的一并融进去。注意原文 text 绝对不要改动，扩写写进 expansion，并追加 2 个不同走向的改写变体到 variants。最后说明你融合了哪几条、各自的取舍。'
   };
   return map[kind] || '';
 }
@@ -3755,6 +4091,8 @@ function renderAiChrome() {
         '<div class="scope-opt" data-quick="link">补全缺失关联</div>' +
         '<div class="scope-opt" data-quick="chapter">审视章节设定</div>' +
         '<div class="scope-opt" data-quick="detail">补全剧情细节</div>' +
+        '<div class="scope-opt" data-quick="ideas">扫描灵感库找机会</div>' +
+        '<div class="scope-opt" data-quick="ideaexpand">扩写 / 融合所选灵感</div>' +
       '</div>' +
       '<div class="ai-sec-title">AI 写入记录</div>' +
       '<button class="btn sm block" id="btnUndoAi">撤销最近一次 AI 写入</button>' +
@@ -3778,6 +4116,12 @@ function renderAiChrome() {
     renderAiStatus(); renderChat();
   }));
   $$('[data-quick]').forEach(n => n.addEventListener('click', () => {
+    // 扩写必须先有一条被选中的灵感，否则 AI 无从下手
+    if (n.dataset.quick === 'ideaexpand' && !(S.selection && S.selection.type === 'idea')) {
+      toast('请先在灵感视图里选中一条灵感', 'warn');
+      setView('ideas');
+      return;
+    }
     const text = quickPrompt(n.dataset.quick);
     if (!text) return;
     S.ai.open = true; $('#aiDrawer').classList.remove('closed');
@@ -3846,6 +4190,7 @@ function selLabel(s) {
   if (s.type === 'place') { const c = placeById(s.id); return c ? c.name : '地点'; }
   if (s.type === 'chapter') { const k = findChapter(s.id); return k ? (k.ch.title || '章节') : '章节'; }
   if (s.type === 'world') return '世界观';
+  if (s.type === 'idea') { const i = ideaById(s.id); return i ? ideaTitle(i) : '灵感'; }
   return s.type;
 }
 function renderChat() {
@@ -3924,9 +4269,21 @@ function sessionContext() {
       })
     } : null,
     chapter: ch ? { id: ch.ch.id, title: ch.ch.title, axis: ch.axis.name, start: ch.ch.start, end: ch.ch.end } : null,
+    idea: (s && s.type === 'idea') ? (() => {
+      const i = ideaById(s.id);
+      if (!i) return null;
+      return {
+        id: i.id, title: ideaTitle(i), kind: i.kind, status: i.status, tags: i.tags,
+        text: (i.text || '').slice(0, 400),
+        expansion: (i.expansion || '').slice(0, 400),
+        mergedFrom: (i.mergedFrom || []).map(x => ideaTitle(ideaById(x)) || x),
+        mergedInto: i.mergedInto ? ideaTitle(ideaById(i.mergedInto)) : '',
+        usedBy: i.usedBy
+      };
+    })() : null,
     counts: {
       events: P.events.length, characters: P.characters.length, places: P.places.length,
-      axes: P.axes.length, edges: P.edges.length, links: P.links.length
+      axes: P.axes.length, edges: P.edges.length, links: P.links.length, ideas: P.ideas.length
     }
   };
 }
@@ -4043,7 +4400,7 @@ function execSessionCommand(cmd, args) {
     fitView();
     renderAll();
   } else if (cmd === 'view') {
-    setView(['timeline', 'character', 'place'].indexOf(args.mode) >= 0 ? args.mode : 'timeline');
+    setView(['timeline', 'character', 'place', 'ideas'].indexOf(args.mode) >= 0 ? args.mode : 'timeline');
   } else if (cmd === 'scene') {
     if (eventById(args.id)) openSceneEditor(args.id);
   } else if (cmd === 'fit') {
@@ -4065,7 +4422,12 @@ function execSessionCommand(cmd, args) {
 function setView(mode) {
   S.viewMode = mode;
   if (mode === 'timeline') S.focusId = '';
+  // 视图之间不共享选择与多选：事件 id 与灵感 id 不该互相污染
+  S.multi.clear();
+  if (mode === 'ideas' || (S.selection && S.selection.type === 'idea')) S.selection = null;
   $$('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.view === mode));
+  $('#ideaBoard').classList.toggle('hide', mode !== 'ideas');
+  $('#canvasWrap').classList.toggle('idea-mode', mode === 'ideas');
   renderAll();
 }
 function wireTopbar() {
@@ -4173,6 +4535,7 @@ async function boot() {
   initCanvasInteractions();
   initKeyboard();
   wireTopbar();
+  wireIdeaBoard();
   renderAiChrome();
 
   try {
@@ -4239,6 +4602,504 @@ async function boot() {
 
   renderAll();
   updateHistoryButtons();
+}
+
+/* ============================================================================
+   21 · 灵感板（ADR-0007）
+
+   灵感是尚未组织进故事的零散想法：不落在画布上、不占逻辑时间、不属于任何轴，
+   所以它是一块独立于画布的卡片墙，而不是时间线的又一种投影。
+   三条不可动摇的规则：
+     · text 是原文，永不被改写；扩写与修改写只追加到 expansion / variants
+     · 采用是引用而非搬运：灵感不消失，只记 usedBy 并转状态
+     · 合并是软合并：被合并的条目留在库里标记去向，可追溯也可反悔
+   ========================================================================== */
+
+function newIdea(data) {
+  const d = data || {};
+  return {
+    id: uid('id'),
+    text: d.text || '',
+    title: d.title || '',
+    kind: IDEA_KINDS[d.kind] ? d.kind : 'note',
+    tags: d.tags || [],
+    characterIds: d.characterIds || [],
+    placeIds: d.placeIds || [],
+    status: IDEA_STATUS[d.status] ? d.status : 'raw',
+    usedBy: d.usedBy || [],
+    mergedInto: d.mergedInto || '',
+    mergedFrom: d.mergedFrom || [],
+    expansion: d.expansion || '',
+    variants: d.variants || [],
+    createdAt: nowLabel(),
+    updatedAt: nowLabel()
+  };
+}
+
+/** 命中当前筛选。q 同时匹配原文、标题、标签、扩写与改写变体 */
+function ideaMatches(i) {
+  const f = S.ideaFilter;
+  if (f.status !== 'all' && i.status !== f.status) return false;
+  if (f.kind !== 'all' && i.kind !== f.kind) return false;
+  const q = (f.q || '').trim().toLowerCase();
+  if (q) {
+    const hay = [i.title, i.text, i.expansion, (i.tags || []).join(' '),
+      (i.variants || []).map(v => v.text).join(' ')].join('\n').toLowerCase();
+    if (hay.indexOf(q) < 0) return false;
+  }
+  return true;
+}
+function filteredIdeas() { return P.ideas.filter(ideaMatches); }
+
+/* ---- 顶部输入与筛选 ---- */
+
+function wireIdeaBoard() {
+  const sel = $('#ibKindSel');
+  if (sel) {
+    sel.innerHTML = IDEA_KIND_ORDER.map(k => '<option value="' + k + '">' + esc(IDEA_KINDS[k].name) + '</option>').join('');
+    sel.value = 'note';
+  }
+  const add = () => {
+    const box = $('#ibQuick');
+    const text = (box.value || '').trim();
+    const kind = ($('#ibKindSel') || {}).value || 'note';
+    box.value = '';
+    const made = ideaAdd(text, kind);
+    if (S.viewMode === 'ideas') toast(text ? '已记下这条灵感' : '已新建一条空灵感，在右侧写内容', 'ok', 1600);
+    return made;
+  };
+  const quick = $('#ibQuick');
+  if (quick) quick.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); add(); }
+  });
+  const btn = $('#ibAdd');
+  if (btn) btn.addEventListener('click', add);
+  const search = $('#ibSearch');
+  if (search) search.addEventListener('input', e => {
+    // 只重建筛选条与卡片，不动顶部输入框，免得打断正在输入的焦点
+    S.ideaFilter.q = e.target.value;
+    renderIdeaBoardPanels();
+    renderLeft();
+  });
+}
+
+function renderIdeasBoard() {
+  const sel = $('#ibKindSel');
+  if (sel && !sel.options.length) {
+    sel.innerHTML = IDEA_KIND_ORDER.map(k => '<option value="' + k + '">' + esc(IDEA_KINDS[k].name) + '</option>').join('');
+    sel.value = 'note';
+  }
+  const s = $('#ibSearch');
+  if (s && document.activeElement !== s) s.value = S.ideaFilter.q || '';
+  renderIdeaBoardPanels();
+}
+
+function renderIdeaBoardPanels() {
+  if (S.viewMode !== 'ideas' || !$('#ideaBoard')) return;
+  const f = S.ideaFilter;
+
+  /* 筛选条 */
+  const stChips = ['all'].concat(Object.keys(IDEA_STATUS)).map(k =>
+    '<button class="ib-chip' + (f.status === k ? ' on' : '') + '" data-fstatus="' + k + '">' +
+    (k === 'all' ? '全部状态' : IDEA_STATUS[k].name) + '</button>').join('');
+  const kdChips = ['all'].concat(IDEA_KIND_ORDER).map(k =>
+    '<button class="ib-chip' + (f.kind === k ? ' on' : '') + '" data-fkind="' + k + '">' +
+    (k === 'all' ? '全部类型' : IDEA_KINDS[k].name) + '</button>').join('');
+  const rows = filteredIdeas();
+  const fb = $('#ibFilters');
+  fb.innerHTML = stChips + '<span style="width:8px"></span>' + kdChips +
+    '<span class="ib-count">' + rows.length + ' / ' + P.ideas.length + ' 条</span>';
+  $$('#ibFilters [data-fstatus]').forEach(n => n.addEventListener('click', () => {
+    S.ideaFilter.status = n.dataset.fstatus; renderAll();
+  }));
+  $$('#ibFilters [data-fkind]').forEach(n => n.addEventListener('click', () => {
+    S.ideaFilter.kind = n.dataset.fkind; renderAll();
+  }));
+
+  /* 多选条 */
+  const bar = $('#ibSelBar');
+  if (S.multi.size > 1) {
+    bar.classList.remove('hide');
+    bar.innerHTML = '<b style="font-size:12px">已选中 ' + S.multi.size + ' 条</b>' +
+      '<span style="color:var(--text-dim);font-size:11px">多条若是同一件事，可以合并</span>' +
+      '<div style="flex:1"></div>' +
+      '<button class="btn primary sm" id="ibMerge">合并为一条</button>' +
+      '<button class="btn sm" id="ibSelClear">取消选择</button>' +
+      '<button class="btn danger sm" id="ibSelDel">删除</button>';
+    $('#ibMerge').addEventListener('click', () => ideaMerge(Array.from(S.multi)));
+    $('#ibSelClear').addEventListener('click', () => { S.multi.clear(); renderAll(); });
+    $('#ibSelDel').addEventListener('click', deleteIdeas);
+  } else {
+    bar.classList.add('hide');
+    bar.innerHTML = '';
+  }
+
+  /* 卡片墙 */
+  const sc = $('#ibScroll');
+  if (!P.ideas.length) {
+    sc.innerHTML = '<div class="ib-empty">灵感库还是空的。<br><br>' +
+      '上面那个输入框随手写点什么，回车就存下来。<br>' +
+      '它不必和现在的剧情有关，也不必完整——先放着，需要的时候再拿出来用。</div>';
+    return;
+  }
+  if (!rows.length) {
+    sc.innerHTML = '<div class="ib-empty">没有符合当前筛选的灵感。</div>';
+    return;
+  }
+  const grid = el('div', { class: 'ib-grid' });
+  for (const i of rows) grid.appendChild(ideaCard(i));
+  sc.innerHTML = '';
+  sc.appendChild(grid);
+}
+
+function ideaCard(i) {
+  const used = (i.usedBy || []).length;
+  const cls = 'ib-card' + (isSel('idea', i.id) ? ' sel' : '') +
+    (i.status === 'merged' ? ' merged' : '') + (i.status === 'used' ? ' used' : '');
+  const foot = ['<span class="ib-badge k">' + esc(IDEA_KINDS[i.kind].name) + '</span>'];
+  if (i.status !== 'raw') foot.push('<span class="ib-badge s-' + i.status + '">' + esc(IDEA_STATUS[i.status].name) + '</span>');
+  if ((i.mergedFrom || []).length) foot.push('<span class="ib-badge">合并 ' + i.mergedFrom.length + ' 条</span>');
+  if (i.expansion) foot.push('<span class="ib-badge">有扩写</span>');
+  if ((i.variants || []).length) foot.push('<span class="ib-badge">变体 ' + i.variants.length + '</span>');
+  for (const t of (i.tags || []).slice(0, 4)) foot.push('<span class="ib-badge tag">#' + esc(t) + '</span>');
+  for (const cid of (i.characterIds || []).slice(0, 3)) { const c = charById(cid); if (c) foot.push('<span class="ib-badge">' + esc(c.name) + '</span>'); }
+  for (const pid of (i.placeIds || []).slice(0, 3)) { const p = placeById(pid); if (p) foot.push('<span class="ib-badge">' + esc(p.name) + '</span>'); }
+
+  const card = el('div', { class: cls, title: '点击编辑 · Shift/Ctrl+点击 多选' },
+    (used ? '<div class="ibc-mark" title="已被采用 ' + used + ' 次">' + used + '</div>' : '') +
+    '<div class="ibc-top"><div class="ibc-title">' + esc(ideaTitle(i)) + '</div></div>' +
+    (i.title ? '<div class="ibc-text">' + esc((i.text || '').slice(0, 220)) + '</div>' : '') +
+    '<div class="ibc-foot">' + foot.join('') + '</div>');
+  card.addEventListener('click', e => {
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      if (S.multi.has(i.id)) S.multi.delete(i.id); else S.multi.add(i.id);
+      S.selection = { type: 'idea', id: i.id };
+      renderIdeasBoard(); renderInspector();
+      return;
+    }
+    S.multi.clear();
+    select('idea', i.id);
+  });
+  return card;
+}
+
+/** 左栏在灵感视图下承载分面与统计，而不是角色 / 地点 / 轴 */
+function renderIdeaLeft(host) {
+  const total = P.ideas.length;
+  const byStatus = {}, byKind = {};
+  for (const i of P.ideas) {
+    byStatus[i.status] = (byStatus[i.status] || 0) + 1;
+    byKind[i.kind] = (byKind[i.kind] || 0) + 1;
+  }
+  const s1 = makeSection('idea-status', '灵感 · 状态', total, null, null);
+  const b1 = body(s1);
+  b1.appendChild(ideaFacet('全部状态', 'status', 'all', total));
+  for (const k of Object.keys(IDEA_STATUS)) b1.appendChild(ideaFacet(IDEA_STATUS[k].name, 'status', k, byStatus[k] || 0));
+  host.appendChild(s1);
+
+  const s2 = makeSection('idea-kind', '灵感 · 类型', null, null, null);
+  const b2 = body(s2);
+  b2.appendChild(ideaFacet('全部类型', 'kind', 'all', total));
+  for (const k of IDEA_KIND_ORDER) b2.appendChild(ideaFacet(IDEA_KINDS[k].name, 'kind', k, byKind[k] || 0));
+  host.appendChild(s2);
+
+  const s3 = makeSection('idea-howto', '怎么用', null, null, null);
+  body(s3).appendChild(el('div', { class: 'hint-box', style: 'margin:8px' },
+    '随手把梗记在中间的输入框里，不必现在就想清楚它属于哪里。<br><br>' +
+    '需要用的时候：选中一条，在右侧把它<b>转为事件</b>或<b>挂到已有事件</b>上；' +
+    '几条零散的想法若其实是一件事，多选后<b>合并为一条</b>收拢。合并是软合并，随时可以拆开，原文一条都不会丢。<br><br>' +
+    '在 AI 面板点「扫描灵感库找机会」，可以让它通读整个库，告诉你哪条适合放进哪里、哪些可以合到一起。'));
+  host.appendChild(s3);
+}
+function ideaFacet(label, key, value, n) {
+  const node = el('div', { class: 'ib-facet-item' + (S.ideaFilter[key] === value ? ' on' : '') },
+    '<span>' + esc(label) + '</span><span class="n">' + n + '</span>');
+  node.addEventListener('click', () => { S.ideaFilter[key] = value; renderAll(); });
+  return node;
+}
+
+/* ---- 动作 ---- */
+
+function ideaAdd(text, kind) {
+  pushUndo();
+  const i = newIdea({ text: (text || '').trim(), kind: kind || 'note' });
+  P.ideas.push(i);
+  markDirty();
+  renderAll();
+  select('idea', i.id);
+  return i;
+}
+
+function ideaSetStatus(id, status) {
+  const i = ideaById(id);
+  if (!i || !IDEA_STATUS[status]) return;
+  pushUndo();
+  i.status = status;
+  i.updatedAt = nowLabel();
+  markDirty(); renderAll();
+  toast('已标记为「' + IDEA_STATUS[status].name + '」', 'ok', 1600);
+}
+
+function deleteIdeas() {
+  let ids = S.multi.size ? Array.from(S.multi)
+    : (S.selection && S.selection.type === 'idea' ? [S.selection.id] : []);
+  ids = ids.filter(id => !!ideaById(id));
+  if (!ids.length) return;
+  const hasSummary = ids.some(id => ((ideaById(id) || {}).mergedFrom || []).length);
+  if (!confirmBox('确定删除这 ' + ids.length + ' 条灵感？' +
+    (hasSummary ? '\n\n其中包含由多条灵感合并出来的条目，删掉它，来源关系也就断了。' : ''))) return;
+  pushUndo();
+  P.ideas = P.ideas.filter(i => !ids.includes(i.id));
+  // 清掉指向被删条目的软合并指针与采用记录，避免留下悬空引用
+  P.ideas.forEach(i => {
+    if (ids.includes(i.mergedInto)) i.mergedInto = '';
+    i.mergedFrom = (i.mergedFrom || []).filter(x => !ids.includes(x));
+    i.usedBy = (i.usedBy || []).filter(u => !ids.includes(u.id));
+  });
+  S.multi.clear();
+  S.selection = null;
+  markDirty(); renderAll();
+  toast('已删除 ' + ids.length + ' 条灵感');
+}
+
+/** 软合并的内核：只负责改数据，返回汇总条目。调用方负责 pushUndo 与重渲染 */
+function mergeIdeasCore(ids, extra) {
+  const use = (ids || []).filter(id => { const i = ideaById(id); return i && i.status !== 'merged'; });
+  if (use.length < 2) return null;
+  const pick = k => {
+    const out = [];
+    for (const id of use) for (const v of (ideaById(id)[k] || [])) if (out.indexOf(v) < 0) out.push(v);
+    return out;
+  };
+  const sum = newIdea({
+    text: use.map(id => {
+      const i = ideaById(id);
+      return (i.title ? '【' + i.title + '】\n' : '') + i.text;
+    }).join('\n\n— — —\n\n'),
+    title: (extra && extra.title) || ('合并：' + use.map(id => ideaTitle(ideaById(id))).join(' + ')).slice(0, 60),
+    kind: (extra && extra.kind) || ideaById(use[0]).kind,
+    tags: pick('tags'),
+    characterIds: pick('characterIds'),
+    placeIds: pick('placeIds'),
+    mergedFrom: use.slice()
+  });
+  // 来源自己若也是合并来的，把更早的来源一并挂上，保持可追溯
+  const deeper = [];
+  for (const id of use) {
+    for (const src of (ideaById(id).mergedFrom || [])) {
+      if (use.indexOf(src) < 0 && sum.mergedFrom.indexOf(src) < 0 && deeper.indexOf(src) < 0) deeper.push(src);
+    }
+  }
+  sum.mergedFrom = sum.mergedFrom.concat(deeper);
+  P.ideas.push(sum);
+  for (const id of use) {
+    const i = ideaById(id);
+    i.status = 'merged';
+    i.mergedInto = sum.id;
+    i.updatedAt = nowLabel();
+  }
+  return sum;
+}
+
+function ideaMerge(ids) {
+  const use = (ids || []).filter(id => { const i = ideaById(id); return i && i.status !== 'merged'; });
+  if (use.length < 2) { toast('至少选中两条未合并的灵感才能合并', 'warn'); return; }
+  pushUndo();
+  const sum = mergeIdeasCore(use, null);
+  S.multi.clear();
+  markDirty(); renderAll();
+  if (sum) select('idea', sum.id);
+  toast('已合并 ' + use.length + ' 条灵感，来源仍保留在库里', 'ok');
+}
+
+/** 反悔：把一条被合并走的灵感恢复成未采用，并从汇总条目里摘掉 */
+function ideaUnmerge(id) {
+  const i = ideaById(id);
+  if (!i || !i.mergedInto) return;
+  const sumId = i.mergedInto;
+  const sum = ideaById(sumId);
+  pushUndo();
+  i.status = 'raw';
+  i.mergedInto = '';
+  i.updatedAt = nowLabel();
+  if (sum) sum.mergedFrom = (sum.mergedFrom || []).filter(x => x !== id);
+  markDirty(); renderAll();
+  toast('已从合并中拆出，恢复为未采用', 'ok');
+}
+
+/** 转为新事件：原文进详细设定，灵感原件不动，只记 usedBy */
+function ideaAdoptAsEvent(id) {
+  const i = ideaById(id);
+  if (!i) return;
+  pushUndo();
+  const box = $('#canvasWrap').getBoundingClientRect();
+  const w = screenToWorld(box.left + box.width / 2, box.top + box.height / 2);
+  const ev = newEvent(w.x, w.y);
+  ev.title = (i.title || '').trim() || ideaTitle(i);
+  ev.brief = i.text;
+  ev.kind = 'side';
+  ev.characterIds = (i.characterIds || []).slice();
+  ev.placeIds = (i.placeIds || []).slice();
+  ev.tags = (i.tags || []).slice();
+  P.events.push(ev);
+  i.status = 'used';
+  i.usedBy.push({ type: 'event', id: ev.id, eventId: ev.id, label: ev.title });
+  i.updatedAt = nowLabel();
+  markDirty();
+  setView('timeline');
+  select('event', ev.id);
+  centerOn(ev);
+  toast('已转为事件，原文仍留在灵感库里', 'ok', 3200);
+}
+
+/** 挂到已有事件：mode = step（作为剧情步骤）| brief（追加到详细设定） */
+function ideaAttach(id, mode) {
+  const i = ideaById(id);
+  if (!i) return;
+  if (!P.events.length) { toast('工程里还没有事件，先用「转为事件」建一个吧', 'warn'); return; }
+  pickEvent(mode === 'step' ? '把灵感作为剧情步骤挂到哪个事件' : '把灵感追加到哪个事件的详细设定', ev => {
+    pushUndo();
+    if (mode === 'step') {
+      ev.scene.steps.push({
+        id: uid('st'), type: 'custom', children: [],
+        fields: { kind: ideaTitle(i), text: i.text }
+      });
+      i.usedBy.push({ type: 'step', id: ev.id, eventId: ev.id, label: ev.title });
+    } else {
+      ev.brief = (ev.brief ? ev.brief.replace(/\s*$/, '') + '\n\n' : '') + i.text;
+      i.usedBy.push({ type: 'note', id: ev.id, eventId: ev.id, label: ev.title });
+    }
+    i.status = 'used';
+    i.updatedAt = nowLabel();
+    markDirty(); renderAll();
+    toast('已挂到「' + ev.title + '」，灵感原件仍在库里', 'ok', 3000);
+  });
+}
+
+/** 事件选择器。事件多了要能靠标题筛，否则选不动 */
+function pickEvent(title, cb) {
+  const list = P.events.slice().sort((a, b) => a.t - b.t);
+  const rows = ev => '<div class="ib-pick" data-pick="' + ev.id + '">' +
+    '<span class="d">t=' + Math.round(ev.t) + '</span>' +
+    '<span class="t">' + esc(ev.title) + '</span>' +
+    '<span class="d">' + esc(KINDS[ev.kind] ? KINDS[ev.kind] : '') + '</span></div>';
+  showModal(
+    '<div class="modal narrow">' +
+      '<div class="m-head"><div class="m-title">' + esc(title) + '</div><button class="m-close" data-close="1">×</button></div>' +
+      '<div class="m-body">' +
+        '<input class="inp" id="pickQ" placeholder="按标题筛选…" spellcheck="false">' +
+        '<div id="pickList" style="margin-top:8px;max-height:46vh;overflow-y:auto"></div>' +
+      '</div>' +
+      '<div class="m-foot"><button class="btn" data-close="1">取消</button></div>' +
+    '</div>');
+  $$('#mask [data-close]').forEach(n => n.addEventListener('click', closeMask));
+  const paint = q => {
+    const qq = (q || '').trim().toLowerCase();
+    const arr = list.filter(e => !qq || (e.title || '').toLowerCase().indexOf(qq) >= 0);
+    $('#pickList').innerHTML = arr.length ? arr.map(rows).join('')
+      : '<div class="empty-note">没有匹配的事件</div>';
+    $$('#pickList [data-pick]').forEach(n => n.addEventListener('click', () => {
+      const ev = eventById(n.dataset.pick);
+      closeMask();
+      if (ev) cb(ev);
+    }));
+  };
+  paint('');
+  $('#pickQ').addEventListener('input', e => paint(e.target.value));
+  $('#pickQ').focus();
+}
+
+/* ---- 检查器 ---- */
+
+function inspIdeaEmpty(host) {
+  INSP = { kind: 'idea-empty', obj: null };
+  host.innerHTML = '<div class="insp-empty">' +
+    '灵感库里的每一条都只是半成品，不需要现在就决定它属于哪里。<br><br>' +
+    '在上面的输入框里写点什么，回车即存。<br>' +
+    '<span class="kbd">Shift / Ctrl + 点击卡片</span> 多选，多选后可合并。<br><br>' +
+    '选中一条后，这里会变成它的编辑器：可以把它转为事件、挂到已有事件，或让 AI 顺着它扩写。' +
+    '</div>';
+}
+
+function inspIdea(host, i) {
+  if (!i) return;
+  INSP = { kind: 'idea', obj: i };
+  const b = head(host, ideaTitle(i), i.id + ' · 更新于 ' + (i.updatedAt || '未知'));
+
+  const kindOpts = {}, statusOpts = {};
+  IDEA_KIND_ORDER.forEach(k => { kindOpts[k] = IDEA_KINDS[k].name; });
+  Object.keys(IDEA_STATUS).forEach(k => { statusOpts[k] = IDEA_STATUS[k].name; });
+
+  const origin = [];
+  if ((i.mergedFrom || []).length) {
+    origin.push('合并自：' + i.mergedFrom.map(x => esc(ideaTitle(ideaById(x)) || '（已删除）')).join('、'));
+  }
+  if (i.mergedInto) origin.push('已并入：' + esc(ideaTitle(ideaById(i.mergedInto)) || '（已删除）'));
+  if ((i.usedBy || []).length) {
+    origin.push('已用于：' + i.usedBy.map(u => esc(u.label || u.id || '')).filter(Boolean).join('、'));
+  }
+
+  b.innerHTML =
+    field('短标题', inp('title', i.title, '留空则用原文首行')) +
+    '<div class="two">' +
+      field('类型', selBox('kind', i.kind, kindOpts)) +
+      field('状态', selBox('status', i.status, statusOpts)) +
+    '</div>' +
+    field('原文', ta('text', i.text, '当初随手写下的那句话。它不会被任何操作改写。', 8),
+      '扩写与改写都只追加到下面，原文始终原样保留。') +
+    field('标签', inp('tags', (i.tags || []).join(', '), '逗号分隔')) +
+    field('关联角色', chipList('char', i.characterIds, () => P.characters, id => { const c = charById(id); return c && c.name; }, '关联角色…')) +
+    field('关联地点', chipList('place', i.placeIds, () => P.places, id => { const p = placeById(id); return p && p.name; }, '关联地点…')) +
+    field('扩写', ta('expansion', i.expansion, '让 AI 顺着它写长，或自己动手。', 6)) +
+    ((i.variants || []).length
+      ? '<div class="field"><label>改写变体</label>' + i.variants.map(v =>
+          '<div class="dep-item"><span class="t" style="white-space:pre-wrap">' + esc(v.text) + '</span>' +
+          '<button class="x" data-vardel="' + v.id + '" title="删除这个变体">×</button></div>').join('') +
+        '</div>'
+      : '') +
+    (origin.length ? '<div class="ib-origin">' + origin.join('<br>') + '</div>' : '') +
+    '<div class="ai-sec-title">写进剧情</div>' +
+    '<div class="batch-bar">' +
+      '<button class="btn primary sm" data-act="idea-to-event">转为事件</button>' +
+      '<button class="btn sm" data-act="idea-to-step">挂为剧情步骤</button>' +
+      '<button class="btn sm" data-act="idea-to-brief">追加到事件设定</button>' +
+    '</div>' +
+    '<div class="batch-bar">' +
+      '<button class="btn sm" data-act="idea-status:used">标记已采用</button>' +
+      '<button class="btn sm" data-act="idea-status:parked">搁置</button>' +
+      '<button class="btn sm" data-act="idea-status:raw">恢复未采用</button>' +
+    '</div>' +
+    (i.mergedInto
+      ? '<button class="btn sm block" data-act="idea-unmerge" style="margin-top:8px">从合并中拆出</button>'
+      : '') +
+    '<div class="insp-actions"><button class="btn danger" data-act="idea-del">删除这条灵感</button></div>';
+
+  wireInspector(i);
+  $$('[data-vardel]', host).forEach(n => n.addEventListener('click', () => {
+    pushUndo();
+    i.variants = i.variants.filter(v => v.id !== n.dataset.vardel);
+    i.updatedAt = nowLabel();
+    markDirty(); renderAll();
+  }));
+}
+
+function inspIdeaBatch(host) {
+  INSP = { kind: 'idea-batch', obj: null };
+  const items = Array.from(S.multi).map(ideaById).filter(Boolean);
+  const b = head(host, '已选中 ' + items.length + ' 条灵感', '多选 · 可合并');
+  b.innerHTML =
+    '<div class="hint-box">合并会把这几条的原文按顺序拼成一条新的汇总灵感，并把它们标记为「已合并」保留在库里。' +
+    '<b>原文一条都不会丢</b>，随时可以在单条上「从合并中拆出」。</div>' +
+    '<div class="batch-bar">' +
+      '<button class="btn primary sm" data-act="idea-merge">合并为一条</button>' +
+      '<button class="btn sm" data-act="idea-sel-clear">取消选择</button>' +
+      '<button class="btn danger sm" data-act="idea-del-selected">删除这 ' + items.length + ' 条</button>' +
+    '</div>' +
+    '<div class="field" style="margin-top:12px"><label>选中项</label><div class="dep-list">' +
+      items.map(i => '<div class="dep-item"><span class="t">' + esc(ideaTitle(i)) + '</span>' +
+        '<span class="dir">' + esc(IDEA_KINDS[i.kind].name) + '</span></div>').join('') +
+    '</div></div>';
+  wireInspector(null);
 }
 
 boot();

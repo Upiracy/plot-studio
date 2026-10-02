@@ -1,6 +1,6 @@
 ---
 name: "plot-studio"
-description: "可视化游戏剧情框架 Plot Studio 的操作手册：启动本地服务、用 agent.py 会话桥读写工程、按 ops 规范提交改动。当用户要求设计/续写/检查/整理该框架里的剧情、埋伏笔、生成事件或驱动其界面时使用。"
+description: "可视化游戏剧情框架 Plot Studio 的操作手册：启动本地服务、用 agent.py 会话桥读写工程、按 ops 规范提交改动。当用户要求设计/续写/检查/整理该框架里的剧情、埋伏笔、把零散灵感用进故事（合并/扩写）、生成事件或驱动其界面时使用。"
 ---
 
 # Plot Studio · 剧情框架操作手册
@@ -57,6 +57,11 @@ python agent.py cmd center --args '{"id":"ev_1"}'                    # 只驱动
 - **伏笔 (foreshadow)**：引用线的一种，必须带 `state`：`open`（已埋未回收）/ `closed`（已回收）。
 - **触发方式 (trigger)**：`passive`（事件自己找上主角）/ `active`（主角去了才发生）。
 - **剧情 (scene)**：事件**内部**的有序步骤流，`step.type ∈ main | narr | battle | explore | check | move | reward | custom`。
+- **灵感 (idea)**：尚未组织进故事的零散想法。它是**独立集合**（ADR-0007），不落在画布上、不占逻辑时间、
+  不属于任何轴，**没有 `t` / `y`**，也不要给它写 `chapterId`。`kind ∈ meme(梗) | scene(桥段) | line(台词) | twist(转折) | lore(设定) | note(杂记)`，
+  `status ∈ raw | used | parked | merged`。三条铁律：`text` 是原文**永远不要改写**（扩写进 `expansion`、
+  变体进 `variants`）；采用是**引用而非搬运**（用 `idea.mark` 转状态，别删）；合并是**软合并**
+  （`mergedFrom` / `mergedInto` 记录来源与去向，被合并的条目留在库里，可反悔拆开）。
 
 术语原文与反例见仓库的 `GLOSSARY.md`，字段级样例见 `AGENT-BRIDGE.md`。
 
@@ -70,6 +75,8 @@ python agent.py cmd center --args '{"id":"ev_1"}'                    # 只驱动
 | `get_event(id)` | 读单个事件的完整信息：属性、选项、步骤、依赖与引用线 |
 | `list_timeline()` | 所有事件按逻辑时间排序的概览 + 每条轴的章节划分 |
 | `list_graph()` | 全部依赖与引用线；含 `openForeshadows`（悬空伏笔清单） |
+| `list_ideas(status?, kind?, query?)` | 列灵感库。`status` 传 `raw` 只看未采用的，是"找机会"的起点 |
+| `get_idea(id)` | 读单条灵感：原文、扩写、变体、合并来源与去向、被用在哪里 |
 
 作为外部 agent，最短路径是直接读 `工程/<名字>.json` 拿全量数据，再用 `agent.py state` 拿实时选中状态。
 
@@ -100,6 +107,12 @@ python agent.py cmd center --args '{"id":"ev_1"}'                    # 只驱动
 { "op": "axis.update", "id": "ax_main", "patch": { "brief": "…" } }
 { "op": "chapter.update", "id": "ch_a1", "patch": { "title": "…", "brief": "…" } }
 { "op": "world.update", "patch": { "brief": "…" } }
+{ "op": "idea.create", "data": { "text": "雾里的钟声每十二分钟响一次", "title": "钟声的节奏", "kind": "meme" } }
+{ "op": "idea.update", "id": "id_1", "patch": { "expansion": "扩写后的长文…", "variants": [ { "id": "vr_1", "text": "另一种写法", "label": "更冷" } ] } }
+{ "op": "idea.update", "id": "id_1", "patch": { "status": "raw", "mergedInto": "" } }   // 从合并中拆开
+{ "op": "idea.delete", "id": "id_1" }
+{ "op": "idea.merge", "ids": ["id_1", "id_2"], "data": { "title": "合并后的标题（可选）" } }
+{ "op": "idea.mark", "id": "id_1", "status": "used" }
 ```
 
 - `link.type ∈ influence | echo | foreshadow | parallel | note`
@@ -112,11 +125,17 @@ python agent.py cmd center --args '{"id":"ev_1"}'                    # 只驱动
 所以提交大批 `event.create` 后，页面会出现待确认卡片——**要主动 `say` 告诉用户去点确认**，
 否则用户以为你没干活。
 
+灵感遵循同一套，但边界值得记住：`idea.update` **只有写 `expansion` / `variants` 时才自动落盘**
+（也就是"扩写"这条路是顺的）；改动原文、标题、状态、标签或合并关系，以及 `idea.create` /
+`idea.merge` / `idea.mark` / `idea.delete`，都要用户确认。
+
 ## 界面指令
 
 `agent.py cmd <名称> --args ...`，可选：`select`（`{type,id,center?}`）、`center`（`{id}`）、
-`focusEntity`（`{kind:"character"|"place", id}`）、`view`（`{mode:"timeline"|"character"|"place"}`）、
+`focusEntity`（`{kind:"character"|"place", id}`）、`view`（`{mode:"timeline"|"character"|"place"|"ideas"}`）、
 `scene`（`{id}` 打开剧情细节编辑器）、`fit`、`reload`、`undo`、`redo`、`toast`（`{text,kind}`）。
+
+`select` 的 `type` 传 `idea` 会自动切到灵感视图；`center` 对灵感无意义（灵感没有位置）。
 
 改完之后用 `center` / `scene` 把用户带到你改的地方，比一句"改好了"有用得多。
 
@@ -134,9 +153,24 @@ python agent.py cmd center --args '{"id":"ev_1"}'                    # 只驱动
 **生成冲突**：先读世界观（`world`）与相关角色 `brief`，冲突必须落在已有设定允许的范围内，
 不要引入世界观没写过的要素（例如设定里"没有魔法"就别写魔法）。
 
+**把灵感用起来**（用户说"这些想法怎么用""帮我找机会"时）：先 `list_ideas` 通读灵感库
+（未采用 `raw` 与搁置 `parked` 都要看），再对照 `list_timeline` / `list_graph` 与各章节 `brief`，
+逐条给出**具体**的落点：放进哪个事件、哪一章，或朝什么方向扩写。两条纪律：
+发现多条灵感其实讲的是同一件事时，**明确指出可以合并的组合**（`idea.merge`，或建议用户在灵感视图里
+多选后手动合并）；确实用不上的直接说明理由，不要硬塞。
+
+**扩写某条灵感**：先 `get_idea` 看它的 `mergedFrom` 与同标签的其他灵感——**能融合的一并融进去**，
+并在回复里说明融合了哪几条、各自的取舍。产出只写 `expansion` 与 `variants`，`text` 一个字都不要动。
+
+**落地一条灵感**：转成事件用 `event.create`（把原文写进 `brief` / `summary`），挂到已有事件则改该事件的
+`scene.steps` 或 `brief`。两种做法都要顺手用 `idea.mark` 把灵感转成 `used` 并在 `usedBy` 里记下位置——
+灵感不该因为被用了就消失。
+
 ## 陷阱
 
 - **不要给事件写 `chapterId`**，归属是派生的。
+- **不要改写灵感的 `text`**，那是原文；扩写进 `expansion`，变体进 `variants`。
+- **不要用删除来表达"这条灵感用过了"**，用 `idea.mark`；也不要为了合并而删掉来源条目。
 - **不要用依赖表达"影响"**，那是引用线。
 - 事件 `t` 是逻辑时间，不是日期；不同轴的 `t` 不可比较。
 - 不要把 AI Key 写进工程 `.json`；配置在 `config.json`（已被 `.gitignore` 忽略）。

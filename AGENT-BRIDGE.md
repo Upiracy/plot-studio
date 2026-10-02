@@ -80,7 +80,29 @@ python agent.py cmd center --args '{"id":"ev_1"}'
 { "op": "axis.update", "id": "ax_main", "patch": { "brief": "…" } }
 { "op": "chapter.update", "id": "ch_a1", "patch": { "title": "…", "brief": "…" } }
 { "op": "world.update", "patch": { "brief": "…" } }
+{ "op": "idea.create", "data": { "text": "雾里的钟声每十二分钟响一次", "title": "钟声的节奏",
+    "kind": "meme", "tags": ["雾"], "characterIds": [], "placeIds": [] } }
+{ "op": "idea.update", "id": "id_1", "patch": { "expansion": "扩写后的长文…",
+    "variants": [ { "id": "vr_1", "text": "另一种写法", "label": "更冷" } ] } }
+{ "op": "idea.delete", "id": "id_1" }
+{ "op": "idea.merge", "ids": ["id_1", "id_2"], "data": { "title": "合并后的标题（可选）" } }
+{ "op": "idea.mark", "id": "id_1", "status": "used" }
 ```
+
+`kind` ∈ `meme | scene | line | twist | lore | note`；`status` ∈ `raw | used | parked | merged`。
+
+灵感是**尚未组织进故事的零散想法**（ADR-0007）。三条不可动摇的规则：
+
+- **`text` 是原文，永远不要改写它。** 扩写写进 `expansion`，改写变体追加到 `variants`。
+  小想法常常妙在当初的措辞，所以原文必须可回退。
+- **采用是引用而非搬运。** 用 `idea.mark` 把状态转成 `used`（或写入 `usedBy`），不要删除它——
+  同一条梗可能先用在一处、日后又在别处呼应。
+- **合并是软合并。** `idea.merge` 会新建一条汇总灵感并记录 `mergedFrom`，被合并的条目留在库里、
+  状态转为 `merged` 并记下 `mergedInto`，因此可追溯也可反悔（`idea.update` 清掉 `mergedInto`、
+  把状态改回 `raw` 即为拆开）。
+
+写入分级沿用同一套：`idea.update` **只有写 `expansion` / `variants` 时才自动落盘**，
+改动原文、标题、状态、标签或合并关系的都要用户确认；`idea.create` / `idea.merge` / `idea.mark` / `idea.delete` 同样需要确认。
 
 `link.type` ∈ `influence | echo | foreshadow | parallel | note`。
 `foreshadow` 必须带 `state`：`open`（已埋设、尚未回收）或 `closed`（已回收）；
@@ -95,8 +117,10 @@ python agent.py cmd center --args '{"id":"ev_1"}'
 ## 界面指令
 
 `cmd` 可取：`select`（`{type, id, center?}`）、`center`（`{id}`）、`focusEntity`（`{kind: "character"|"place", id}`）、
-`view`（`{mode: "timeline"|"character"|"place"}`）、`scene`（`{id}` 打开剧情细节编辑器）、
+`view`（`{mode: "timeline"|"character"|"place"|"ideas"}`）、`scene`（`{id}` 打开剧情细节编辑器）、
 `fit`、`reload`（重读工程文件）、`undo`、`redo`、`toast`（`{text, kind}`）。
+
+`select` 的 `type` 传 `idea` 时会自动切到灵感视图，`center` 对灵感无意义。
 
 ## 一个回合的样子
 
@@ -120,4 +144,7 @@ $ python agent.py patch ops.json --text "补了两个事件，并给旧事件加
 - 轴是铺满画面高度的半透明色带，各自持有 `chapters`（同轴首尾相接、不留空隙）。
 - 依赖表示"目标在源完成后解锁"；分支 = 依赖 + 源事件上某个选项 id 填进 `viaChoiceId`。
 - 引用线表示非强依赖的叙事关联（做过某事件会让此事件走向不同），不要滥用依赖来表达它。
+- 灵感 `ideas` 是独立集合（ADR-0007）：不落在画布上、不占逻辑时间、不属于任何轴，因此没有 `t` / `y`，
+  也不要试图给它写 `chapterId`。它靠 `status`（raw/used/parked/merged）与 `usedBy` 记录生命周期，
+  靠 `mergedFrom` / `mergedInto` 记录软合并的来源与去向。检索灵感用 `list_ideas` / `get_idea`。
 - 详细结构见 `工程/*.json`，术语表见 `GLOSSARY.md`。
